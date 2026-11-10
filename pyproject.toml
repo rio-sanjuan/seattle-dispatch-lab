@@ -1,0 +1,38 @@
+[project]
+name = "seattle-dispatch-lab"
+version = "0.1.0"
+description = "A synthetic food-delivery dispatcher running on real Seattle streets and traffic"
+readme = "README.md"
+authors = [
+    { name = "Ryan San Juan", email = "22527804+rio-sanjuan@users.noreply.github.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.162.3",
+    "h3>=4.5.0",
+    "httpx>=0.28.1",
+    "networkx>=3.7",
+    "numpy>=2.5.4",
+    "osmnx>=2.1.1",
+    "scipy>=1.18.1",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[project.scripts]
+dispatch-lab = "seattle_dispatch_lab.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.12.23,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "ruff>=0.17.4",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
