@@ -3,6 +3,8 @@ name = "seattle-dispatch-lab"
 version = "0.1.0"
 description = "A synthetic food-delivery dispatcher running on real Seattle streets and traffic"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     { name = "Ryan San Juan", email = "22527804+rio-sanjuan@users.noreply.github.com" }
 ]

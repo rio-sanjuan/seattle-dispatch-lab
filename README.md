@@ -127,3 +127,8 @@ scripts/
   [zenodo.org/records/3258904](https://zenodo.org/records/3258904), CC-BY-4.0.
   `data/traffic_profile.json` is derived from it.
 - Map tiles in the live view: [OpenFreeMap](https://openfreemap.org).
+
+## License
+
+Code: [MIT](LICENSE). `data/traffic_profile.json` is derived from the CC-BY-4.0
+dataset credited above and stays under that license.
