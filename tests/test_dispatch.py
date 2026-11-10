@@ -16,7 +16,7 @@ def view(pickup, *, now=1000.0, est_ready=None, declined=None, placed=None):
         driver_ids=np.arange(100, 100 + n_drivers),
         order_ids=np.arange(n_orders),
         pickup_drive=pickup,
-        dropoff_drive=np.full(n_orders, 300.0),
+        dropoff_drive=np.full(pickup.shape, 300.0),
         placed=np.full(n_orders, now - 60.0) if placed is None else np.array(placed, dtype=float),
         est_ready=np.full(n_orders, now) if est_ready is None else np.array(est_ready, dtype=float),
         promised=np.full(n_orders, now + 3600.0),

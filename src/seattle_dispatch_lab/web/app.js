@@ -40,12 +40,14 @@ const line = (coords, properties) => ({ type: "Feature", properties, geometry: {
 map.on("load", () => {
   const colors = DRIVER_COLOR();
   const byStatus = ["match", ["get", "status"], 3, colors[3], 4, colors[4], 5, colors[5], 6, colors[6], colors[1]];
-  for (const id of ["freeways", "routes", "restaurants", "orders", "focus", "drivers"]) {
+  for (const id of ["transit", "freeways", "routes", "restaurants", "orders", "focus", "drivers"]) {
     map.addSource(id, { type: "geojson", data: fc([]) });
   }
   map.addLayer({ id: "freeways", type: "line", source: "freeways",
     layout: { "line-cap": "round", "line-join": "round" },
     paint: { "line-color": css("--muted"), "line-width": ["interpolate", ["linear"], ["zoom"], 10, 1.5, 14, 4], "line-opacity": 0.85 } });
+  map.addLayer({ id: "transit", type: "line", source: "transit",
+    paint: { "line-color": css("--ink-2"), "line-width": 1, "line-opacity": 0.28 } }, "freeways");
   map.addLayer({ id: "routes", type: "line", source: "routes",
     paint: { "line-color": byStatus, "line-width": 1.5, "line-opacity": 0.3 } });
   map.addLayer({ id: "restaurants", type: "circle", source: "restaurants",
@@ -59,7 +61,8 @@ map.on("load", () => {
     paint: { "circle-radius": 8, "circle-color": "rgba(0,0,0,0)", "circle-stroke-width": 2.5, "circle-stroke-color": css("--ink") } });
   map.addLayer({ id: "drivers", type: "circle", source: "drivers",
     paint: { "circle-radius": ["case", ["get", "sel"], 8, 5.5], "circle-color": byStatus,
-      "circle-stroke-width": 2, "circle-stroke-color": css("--surface") } });
+      "circle-stroke-width": ["case", ["get", "transit"], 2.5, 2],
+      "circle-stroke-color": ["case", ["get", "transit"], css("--ink"), css("--surface")] } });
 
   const hover = (layer, text) => {
     map.on("mousemove", layer, (e) => {
@@ -70,7 +73,7 @@ map.on("load", () => {
     });
     map.on("mouseleave", layer, () => { map.getCanvas().style.cursor = ""; popup.remove(); });
   };
-  hover("drivers", (p) => `Driver ${p.id}: ${DRIVER_LABEL[p.status]}${p.order >= 0 ? `, order #${p.order}` : ""}`);
+  hover("drivers", (p) => `Driver ${p.id}${p.transit ? " (public transit)" : ""}: ${DRIVER_LABEL[p.status]}${p.order >= 0 ? `, order #${p.order}` : ""}`);
   hover("orders", (p) => `Order #${p.id}: ${ORDER_LABEL[p.status]}. Promised by ${clock(p.promised)}${p.late ? " (late)" : ""}`);
   hover("restaurants", (p) => `${p.name} (food usually ready in ${p.prep} min)`);
   map.on("click", (e) => {
@@ -86,6 +89,8 @@ map.on("load", () => {
 function applyMeta() {
   map.getSource("restaurants").setData(fc(meta.restaurants.map(([id, lon, lat, name, prep]) => point(lon, lat, { id, name, prep }))));
   map.getSource("freeways").setData(fc(meta.freeways.flatMap((f) => f.lines.map((c) => line(c, { cls: f.cls })))));
+  map.getSource("transit").setData(fc(meta.transit_lines.map((c) => line(c, {}))));
+  for (const n of document.querySelectorAll(".transit-only")) n.hidden = meta.config.courier_mode === "car";
   fitCity();
   trafficKey = "";
 }
@@ -126,7 +131,7 @@ function frame() {
     const f = Math.min(1, (now - d.t0) / 110);
     const lon = d.from[0] + f * (d.to[0] - d.from[0]), lat = d.from[1] + f * (d.to[1] - d.from[1]);
     d.at = [lon, lat];
-    feats.push(point(lon, lat, { id, status: d.status, order: d.order, sel: id === selected }));
+    feats.push(point(lon, lat, { id, status: d.status, order: d.order, transit: d.transit, sel: id === selected }));
   }
   map.getSource("drivers").setData(fc(feats));
   requestAnimationFrame(frame);
@@ -185,6 +190,7 @@ function onHello(msg) {
   const c = msg.config;
   $("f-drivers").value = c.n_drivers; $("f-orders").value = c.peak_orders_per_hour; day.value = c.start_day;
   $("f-start").value = c.start_hour; $("f-traffic").value = c.traffic_scale; $("f-seed").value = c.seed;
+  $("f-mode").value = c.courier_mode; $("f-radius").value = c.delivery_radius_m / 1000;
   if (mapReady) applyMeta();
 }
 
@@ -202,11 +208,11 @@ function onState(s) {
 
   // Drivers: remember where each one is drawn now and where it should go.
   const t0 = performance.now(), seen = new Set();
-  for (const [id, lon, lat, status, order] of s.drivers) {
+  for (const [id, lon, lat, status, order, onTransit] of s.drivers) {
     seen.add(id);
     const d = drivers.get(id);
     if (d) { d.from = d.at ?? d.to; d.to = [lon, lat]; d.t0 = t0; d.status = status; d.order = order; }
-    else drivers.set(id, { from: [lon, lat], to: [lon, lat], t0, status, order });
+    else drivers.set(id, { from: [lon, lat], to: [lon, lat], t0, status, order, transit: onTransit === 1 });
   }
   for (const id of drivers.keys()) if (!seen.has(id)) { drivers.delete(id); routes.delete(id); routesDirty = true; }
 
@@ -277,7 +283,9 @@ function showDetail(d) {
   const close = el("button", "Close"); close.onclick = () => select(null); head.append(close);
   box.append(head);
   const row = (a, b) => { const r = el("div", null, "row"); r.append(el("span", a), el("span", b)); box.append(r); };
+  row("Travels by", d.mode === "transit" ? "Public transit" : "Car");
   row("Doing now", DRIVER_LABEL[d.status]);
+  if (d.leg) row("This minute", d.leg);
   row("Deliveries so far", String(d.deliveries));
   row("Offers declined", String(d.declines));
   row("Distance driven", `${d.km} km`);
@@ -394,6 +402,7 @@ $("toggle-table").onclick = (e) => {
 $("restart").onclick = () => ws.send(JSON.stringify({ cmd: "restart", config: {
   n_drivers: $("f-drivers").value, peak_orders_per_hour: $("f-orders").value, start_day: $("f-day").value,
   start_hour: $("f-start").value, traffic_scale: $("f-traffic").value, seed: $("f-seed").value,
+  courier_mode: $("f-mode").value, delivery_radius_m: Number($("f-radius").value) * 1000,
   dispatcher: $("dispatcher").value } }));
 addEventListener("resize", drawCharts);
 connect();
