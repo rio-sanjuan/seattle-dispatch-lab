@@ -1,0 +1,3324 @@
+{
+ "meta": {
+  "generated": "2026-11-10",
+  "repo": "rio-sanjuan/seattle-dispatch-lab",
+  "commit": "daece2a9a2f5ced945c2b9e22da4076e36390942",
+  "uncommitted_code_changes": false,
+  "command": "uv run python scripts/export_results.py --days 10 --seed 1",
+  "seeds": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10
+  ],
+  "base_config": {
+   "seed": 7,
+   "start_day": "Fri",
+   "start_hour": 10.0,
+   "hours": 12.0,
+   "n_restaurants": 250,
+   "n_drivers": 220,
+   "peak_orders_per_hour": 400.0,
+   "delivery_radius_m": 4500.0,
+   "promise_slack_min": 10.0,
+   "traffic_scale": 1.0,
+   "dispatcher": "matching_jit",
+   "jit_buffer_s": 240.0,
+   "know_prep": false,
+   "know_drive": false,
+   "courier_mode": "car",
+   "transit_share": 0.5
+  },
+  "scenarios": {
+   "normal": {
+    "peak_orders_per_hour": 400.0
+   },
+   "busy": {
+    "peak_orders_per_hour": 520.0
+   }
+  },
+  "interval": "half_width is half of a 95% Student-t confidence interval over days; vs_baseline is the per-day paired difference (variant minus baseline)"
+ },
+ "metrics": [
+  {
+   "key": "avg_delivery_min",
+   "label": "Average delivery time (min)",
+   "group": "Customer",
+   "better": "low",
+   "digits": 1
+  },
+  {
+   "key": "p90_delivery_min",
+   "label": "90th percentile delivery time (min)",
+   "group": "Customer",
+   "better": "low",
+   "digits": 1
+  },
+  {
+   "key": "late_pct",
+   "label": "Not delivered by the promised time (%)",
+   "group": "Customer",
+   "better": "low",
+   "digits": 1
+  },
+  {
+   "key": "severe_late_pct",
+   "label": "20+ min past the promised time (%)",
+   "group": "Customer",
+   "better": "low",
+   "digits": 1
+  },
+  {
+   "key": "unfulfilled_pct",
+   "label": "Due but never delivered (%)",
+   "group": "Customer",
+   "better": "low",
+   "digits": 2
+  },
+  {
+   "key": "food_wait_min",
+   "label": "Food waits for a driver (min)",
+   "group": "Customer",
+   "better": "low",
+   "digits": 1
+  },
+  {
+   "key": "ready_to_door_min",
+   "label": "Food age at the door (min)",
+   "group": "Customer",
+   "better": "low",
+   "digits": 1
+  },
+  {
+   "key": "promise_bias_min",
+   "label": "Arrival vs. promise (min, negative = early)",
+   "group": "Customer",
+   "better": "",
+   "digits": 1
+  },
+  {
+   "key": "active_min_per_delivery",
+   "label": "Driver time used per delivery (min)",
+   "group": "Courier",
+   "better": "low",
+   "digits": 1
+  },
+  {
+   "key": "pickup_drive_min",
+   "label": "Drive to restaurant (min)",
+   "group": "Courier",
+   "better": "low",
+   "digits": 1
+  },
+  {
+   "key": "driver_wait_min",
+   "label": "Driver waits at restaurant (min)",
+   "group": "Courier",
+   "better": "low",
+   "digits": 1
+  },
+  {
+   "key": "km_per_delivery",
+   "label": "Distance driven per delivery (km)",
+   "group": "Courier",
+   "better": "low",
+   "digits": 1
+  },
+  {
+   "key": "deliveries_per_driver_hour",
+   "label": "Deliveries per driver-hour",
+   "group": "Courier",
+   "better": "high",
+   "digits": 2
+  },
+  {
+   "key": "driver_gini",
+   "label": "Unevenness of work across drivers (Gini, 0-1)",
+   "group": "Courier",
+   "better": "low",
+   "digits": 3
+  },
+  {
+   "key": "decline_pct",
+   "label": "Offers declined (%)",
+   "group": "Courier",
+   "better": "low",
+   "digits": 1
+  },
+  {
+   "key": "delivered",
+   "label": "Orders delivered",
+   "group": "Marketplace",
+   "better": "high",
+   "digits": 0
+  },
+  {
+   "key": "wait_for_assign_min",
+   "label": "Order waits for a driver (min)",
+   "group": "Marketplace",
+   "better": "",
+   "digits": 1
+  },
+  {
+   "key": "utilization_pct",
+   "label": "Driver time spent on deliveries (%)",
+   "group": "Marketplace",
+   "better": "",
+   "digits": 1
+  },
+  {
+   "key": "undersupplied_pct",
+   "label": "Time with more waiting orders than free drivers (%)",
+   "group": "Marketplace",
+   "better": "low",
+   "digits": 1
+  },
+  {
+   "key": "eta_error_min",
+   "label": "Drive-time estimate error (min)",
+   "group": "Estimates",
+   "better": "low",
+   "digits": 1
+  },
+  {
+   "key": "prep_error_min",
+   "label": "Food-ready estimate error (min)",
+   "group": "Estimates",
+   "better": "",
+   "digits": 1
+  }
+ ],
+ "experiments": [
+  {
+   "experiment": "dispatchers",
+   "scenario": "normal",
+   "variants": {
+    "nearest": {
+     "dispatcher": "nearest"
+    },
+    "matching": {
+     "dispatcher": "matching"
+    },
+    "matching_jit": {
+     "dispatcher": "matching_jit"
+    }
+   },
+   "baseline": "matching",
+   "days": 10,
+   "metrics": {
+    "avg_delivery_min": {
+     "mean": {
+      "nearest": 30.6569,
+      "matching": 26.2517,
+      "matching_jit": 26.9143
+     },
+     "half_width": {
+      "nearest": 2.1638,
+      "matching": 0.4947,
+      "matching_jit": 0.4645
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 4.4052,
+       "half_width": 1.7596,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.6626,
+       "half_width": 0.1265,
+       "verdict": "worse",
+       "days": 10
+      }
+     }
+    },
+    "p90_delivery_min": {
+     "mean": {
+      "nearest": 43.8073,
+      "matching": 36.2676,
+      "matching_jit": 36.78
+     },
+     "half_width": {
+      "nearest": 4.1085,
+      "matching": 0.5474,
+      "matching_jit": 0.5215
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 7.5398,
+       "half_width": 3.7858,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.5124,
+       "half_width": 0.2329,
+       "verdict": "worse",
+       "days": 10
+      }
+     }
+    },
+    "late_pct": {
+     "mean": {
+      "nearest": 27.5903,
+      "matching": 6.7688,
+      "matching_jit": 7.3034
+     },
+     "half_width": {
+      "nearest": 7.5892,
+      "matching": 0.6621,
+      "matching_jit": 0.7923
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 20.8215,
+       "half_width": 7.1897,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.5345,
+       "half_width": 0.4737,
+       "verdict": "worse",
+       "days": 10
+      }
+     }
+    },
+    "severe_late_pct": {
+     "mean": {
+      "nearest": 2.5118,
+      "matching": 0.1869,
+      "matching_jit": 0.1728
+     },
+     "half_width": {
+      "nearest": 3.3476,
+      "matching": 0.1483,
+      "matching_jit": 0.1278
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 2.3249,
+       "half_width": 3.2041,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": -0.0142,
+       "half_width": 0.0527,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "unfulfilled_pct": {
+     "mean": {
+      "nearest": 0.139,
+      "matching": 0.0244,
+      "matching_jit": 0.0244
+     },
+     "half_width": {
+      "nearest": 0.2545,
+      "matching": 0.0247,
+      "matching_jit": 0.0247
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 0.1146,
+       "half_width": 0.2472,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.0,
+       "half_width": 0.0,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "food_wait_min": {
+     "mean": {
+      "nearest": 6.0137,
+      "matching": 1.5665,
+      "matching_jit": 2.237
+     },
+     "half_width": {
+      "nearest": 2.1187,
+      "matching": 0.3936,
+      "matching_jit": 0.3442
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 4.4472,
+       "half_width": 1.7649,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.6705,
+       "half_width": 0.1274,
+       "verdict": "worse",
+       "days": 10
+      }
+     }
+    },
+    "ready_to_door_min": {
+     "mean": {
+      "nearest": 15.8817,
+      "matching": 11.4773,
+      "matching_jit": 12.1407
+     },
+     "half_width": {
+      "nearest": 2.1569,
+      "matching": 0.4519,
+      "matching_jit": 0.3935
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 4.4044,
+       "half_width": 1.7564,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.6634,
+       "half_width": 0.1259,
+       "verdict": "worse",
+       "days": 10
+      }
+     }
+    },
+    "promise_bias_min": {
+     "mean": {
+      "nearest": -4.1159,
+      "matching": -8.52,
+      "matching_jit": -7.8544
+     },
+     "half_width": {
+      "nearest": 2.1271,
+      "matching": 0.3975,
+      "matching_jit": 0.3528
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 4.4042,
+       "half_width": 1.7568,
+       "verdict": "",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.6657,
+       "half_width": 0.1258,
+       "verdict": "",
+       "days": 10
+      }
+     }
+    },
+    "active_min_per_delivery": {
+     "mean": {
+      "nearest": 25.8033,
+      "matching": 24.5435,
+      "matching_jit": 22.2303
+     },
+     "half_width": {
+      "nearest": 0.2667,
+      "matching": 0.3241,
+      "matching_jit": 0.1765
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 1.2598,
+       "half_width": 0.186,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": -2.3132,
+       "half_width": 0.2569,
+       "verdict": "better",
+       "days": 10
+      }
+     }
+    },
+    "pickup_drive_min": {
+     "mean": {
+      "nearest": 9.5918,
+      "matching": 7.0536,
+      "matching_jit": 7.4303
+     },
+     "half_width": {
+      "nearest": 0.4176,
+      "matching": 0.1494,
+      "matching_jit": 0.1893
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 2.5382,
+       "half_width": 0.3473,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.3767,
+       "half_width": 0.1544,
+       "verdict": "worse",
+       "days": 10
+      }
+     }
+    },
+    "driver_wait_min": {
+     "mean": {
+      "nearest": 5.4533,
+      "matching": 7.0577,
+      "matching_jit": 4.1038
+     },
+     "half_width": {
+      "nearest": 0.5394,
+      "matching": 0.4549,
+      "matching_jit": 0.1993
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": -1.6044,
+       "half_width": 0.2677,
+       "verdict": "better",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": -2.9538,
+       "half_width": 0.279,
+       "verdict": "better",
+       "days": 10
+      }
+     }
+    },
+    "km_per_delivery": {
+     "mean": {
+      "nearest": 7.9609,
+      "matching": 6.1496,
+      "matching_jit": 6.3541
+     },
+     "half_width": {
+      "nearest": 0.2996,
+      "matching": 0.0958,
+      "matching_jit": 0.1094
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 1.8113,
+       "half_width": 0.2486,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.2045,
+       "half_width": 0.0877,
+       "verdict": "worse",
+       "days": 10
+      }
+     }
+    },
+    "deliveries_per_driver_hour": {
+     "mean": {
+      "nearest": 1.5701,
+      "matching": 1.5781,
+      "matching_jit": 1.5842
+     },
+     "half_width": {
+      "nearest": 0.0387,
+      "matching": 0.0429,
+      "matching_jit": 0.0437
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": -0.008,
+       "half_width": 0.0091,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.0061,
+       "half_width": 0.0029,
+       "verdict": "better",
+       "days": 10
+      }
+     }
+    },
+    "driver_gini": {
+     "mean": {
+      "nearest": 0.1528,
+      "matching": 0.1554,
+      "matching_jit": 0.1645
+     },
+     "half_width": {
+      "nearest": 0.0079,
+      "matching": 0.0083,
+      "matching_jit": 0.0087
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": -0.0027,
+       "half_width": 0.0037,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.0091,
+       "half_width": 0.0041,
+       "verdict": "worse",
+       "days": 10
+      }
+     }
+    },
+    "decline_pct": {
+     "mean": {
+      "nearest": 24.0851,
+      "matching": 16.545,
+      "matching_jit": 17.2648
+     },
+     "half_width": {
+      "nearest": 1.5592,
+      "matching": 0.8752,
+      "matching_jit": 0.8019
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 7.5402,
+       "half_width": 1.5715,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.7198,
+       "half_width": 0.6271,
+       "verdict": "worse",
+       "days": 10
+      }
+     }
+    },
+    "delivered": {
+     "mean": {
+      "nearest": 2049.8,
+      "matching": 2053.2,
+      "matching_jit": 2053.4
+     },
+     "half_width": {
+      "nearest": 17.4015,
+      "matching": 22.1306,
+      "matching_jit": 21.6748
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": -3.4,
+       "half_width": 8.9742,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.2,
+       "half_width": 0.8121,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "wait_for_assign_min": {
+     "mean": {
+      "nearest": 4.8536,
+      "matching": 1.7082,
+      "matching_jit": 4.684
+     },
+     "half_width": {
+      "nearest": 2.1385,
+      "matching": 0.567,
+      "matching_jit": 0.347
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 3.1454,
+       "half_width": 1.5989,
+       "verdict": "",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 2.9758,
+       "half_width": 0.3007,
+       "verdict": "",
+       "days": 10
+      }
+     }
+    },
+    "utilization_pct": {
+     "mean": {
+      "nearest": 68.0065,
+      "matching": 65.0126,
+      "matching_jit": 59.1118
+     },
+     "half_width": {
+      "nearest": 1.6307,
+      "matching": 1.305,
+      "matching_jit": 1.7334
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 2.9939,
+       "half_width": 0.4211,
+       "verdict": "",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": -5.9009,
+       "half_width": 0.5598,
+       "verdict": "",
+       "days": 10
+      }
+     }
+    },
+    "undersupplied_pct": {
+     "mean": {
+      "nearest": 23.1724,
+      "matching": 15.0345,
+      "matching_jit": 16.3448
+     },
+     "half_width": {
+      "nearest": 4.5822,
+      "matching": 2.8178,
+      "matching_jit": 2.8106
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 8.1379,
+       "half_width": 2.2524,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 1.3103,
+       "half_width": 0.787,
+       "verdict": "worse",
+       "days": 10
+      }
+     }
+    },
+    "eta_error_min": {
+     "mean": {
+      "nearest": 0.555,
+      "matching": 0.4174,
+      "matching_jit": 0.4391
+     },
+     "half_width": {
+      "nearest": 0.0257,
+      "matching": 0.0135,
+      "matching_jit": 0.0177
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 0.1376,
+       "half_width": 0.0181,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.0217,
+       "half_width": 0.0099,
+       "verdict": "worse",
+       "days": 10
+      }
+     }
+    },
+    "prep_error_min": {
+     "mean": {
+      "nearest": 4.0937,
+      "matching": 4.0928,
+      "matching_jit": 4.0917
+     },
+     "half_width": {
+      "nearest": 0.0779,
+      "matching": 0.0772,
+      "matching_jit": 0.077
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 0.0009,
+       "half_width": 0.001,
+       "verdict": "",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": -0.0011,
+       "half_width": 0.0022,
+       "verdict": "",
+       "days": 10
+      }
+     }
+    }
+   }
+  },
+  {
+   "experiment": "dispatchers",
+   "scenario": "busy",
+   "variants": {
+    "nearest": {
+     "dispatcher": "nearest"
+    },
+    "matching": {
+     "dispatcher": "matching"
+    },
+    "matching_jit": {
+     "dispatcher": "matching_jit"
+    }
+   },
+   "baseline": "matching",
+   "days": 10,
+   "metrics": {
+    "avg_delivery_min": {
+     "mean": {
+      "nearest": 44.4321,
+      "matching": 28.8572,
+      "matching_jit": 29.4281
+     },
+     "half_width": {
+      "nearest": 1.7754,
+      "matching": 0.5616,
+      "matching_jit": 0.4632
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 15.5749,
+       "half_width": 1.3159,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.571,
+       "half_width": 0.1357,
+       "verdict": "worse",
+       "days": 10
+      }
+     }
+    },
+    "p90_delivery_min": {
+     "mean": {
+      "nearest": 78.6442,
+      "matching": 38.6469,
+      "matching_jit": 39.0454
+     },
+     "half_width": {
+      "nearest": 4.9761,
+      "matching": 0.5594,
+      "matching_jit": 0.4037
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 39.9973,
+       "half_width": 4.6656,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.3985,
+       "half_width": 0.2221,
+       "verdict": "worse",
+       "days": 10
+      }
+     }
+    },
+    "late_pct": {
+     "mean": {
+      "nearest": 55.4827,
+      "matching": 12.1102,
+      "matching_jit": 13.2567
+     },
+     "half_width": {
+      "nearest": 2.0234,
+      "matching": 1.2434,
+      "matching_jit": 1.1499
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 43.3726,
+       "half_width": 1.169,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 1.1465,
+       "half_width": 0.2656,
+       "verdict": "worse",
+       "days": 10
+      }
+     }
+    },
+    "severe_late_pct": {
+     "mean": {
+      "nearest": 34.7608,
+      "matching": 1.4418,
+      "matching_jit": 1.4832
+     },
+     "half_width": {
+      "nearest": 2.6779,
+      "matching": 0.4869,
+      "matching_jit": 0.4797
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 33.319,
+       "half_width": 2.3294,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.0414,
+       "half_width": 0.1187,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "unfulfilled_pct": {
+     "mean": {
+      "nearest": 9.2128,
+      "matching": 0.2164,
+      "matching_jit": 0.2425
+     },
+     "half_width": {
+      "nearest": 1.5067,
+      "matching": 0.313,
+      "matching_jit": 0.3744
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 8.9964,
+       "half_width": 1.2726,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.026,
+       "half_width": 0.072,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "food_wait_min": {
+     "mean": {
+      "nearest": 19.7283,
+      "matching": 4.1494,
+      "matching_jit": 4.7243
+     },
+     "half_width": {
+      "nearest": 1.7107,
+      "matching": 0.4913,
+      "matching_jit": 0.4151
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 15.5789,
+       "half_width": 1.3284,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.5749,
+       "half_width": 0.1374,
+       "verdict": "worse",
+       "days": 10
+      }
+     }
+    },
+    "ready_to_door_min": {
+     "mean": {
+      "nearest": 29.6169,
+      "matching": 14.0298,
+      "matching_jit": 14.6007
+     },
+     "half_width": {
+      "nearest": 1.7459,
+      "matching": 0.5239,
+      "matching_jit": 0.4508
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 15.5871,
+       "half_width": 1.3339,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.5709,
+       "half_width": 0.1378,
+       "verdict": "worse",
+       "days": 10
+      }
+     }
+    },
+    "promise_bias_min": {
+     "mean": {
+      "nearest": 9.5242,
+      "matching": -5.9322,
+      "matching_jit": -5.3613
+     },
+     "half_width": {
+      "nearest": 1.6942,
+      "matching": 0.5088,
+      "matching_jit": 0.4234
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 15.4564,
+       "half_width": 1.3029,
+       "verdict": "",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.5709,
+       "half_width": 0.137,
+       "verdict": "",
+       "days": 10
+      }
+     }
+    },
+    "active_min_per_delivery": {
+     "mean": {
+      "nearest": 26.314,
+      "matching": 22.9997,
+      "matching_jit": 21.7354
+     },
+     "half_width": {
+      "nearest": 0.2527,
+      "matching": 0.2415,
+      "matching_jit": 0.1772
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 3.3143,
+       "half_width": 0.283,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": -1.2643,
+       "half_width": 0.1533,
+       "verdict": "better",
+       "days": 10
+      }
+     }
+    },
+    "pickup_drive_min": {
+     "mean": {
+      "nearest": 11.6391,
+      "matching": 7.3033,
+      "matching_jit": 7.6605
+     },
+     "half_width": {
+      "nearest": 0.2982,
+      "matching": 0.1052,
+      "matching_jit": 0.1325
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 4.3358,
+       "half_width": 0.2484,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.3572,
+       "half_width": 0.0678,
+       "verdict": "worse",
+       "days": 10
+      }
+     }
+    },
+    "driver_wait_min": {
+     "mean": {
+      "nearest": 3.5021,
+      "matching": 4.9242,
+      "matching_jit": 3.1232
+     },
+     "half_width": {
+      "nearest": 0.2845,
+      "matching": 0.2435,
+      "matching_jit": 0.141
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": -1.4221,
+       "half_width": 0.178,
+       "verdict": "better",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": -1.801,
+       "half_width": 0.1238,
+       "verdict": "better",
+       "days": 10
+      }
+     }
+    },
+    "km_per_delivery": {
+     "mean": {
+      "nearest": 9.1706,
+      "matching": 6.2725,
+      "matching_jit": 6.4721
+     },
+     "half_width": {
+      "nearest": 0.159,
+      "matching": 0.0681,
+      "matching_jit": 0.0863
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 2.8981,
+       "half_width": 0.1611,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.1996,
+       "half_width": 0.0442,
+       "verdict": "worse",
+       "days": 10
+      }
+     }
+    },
+    "deliveries_per_driver_hour": {
+     "mean": {
+      "nearest": 1.8398,
+      "matching": 2.0378,
+      "matching_jit": 2.0406
+     },
+     "half_width": {
+      "nearest": 0.0339,
+      "matching": 0.0406,
+      "matching_jit": 0.0414
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": -0.1981,
+       "half_width": 0.0272,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.0028,
+       "half_width": 0.0033,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "driver_gini": {
+     "mean": {
+      "nearest": 0.1062,
+      "matching": 0.1306,
+      "matching_jit": 0.1313
+     },
+     "half_width": {
+      "nearest": 0.0079,
+      "matching": 0.0074,
+      "matching_jit": 0.0072
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": -0.0244,
+       "half_width": 0.0074,
+       "verdict": "better",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.0007,
+       "half_width": 0.0034,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "decline_pct": {
+     "mean": {
+      "nearest": 28.5341,
+      "matching": 16.886,
+      "matching_jit": 17.7536
+     },
+     "half_width": {
+      "nearest": 1.1719,
+      "matching": 0.5496,
+      "matching_jit": 0.8234
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 11.6481,
+       "half_width": 1.1738,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.8676,
+       "half_width": 0.7616,
+       "verdict": "worse",
+       "days": 10
+      }
+     }
+    },
+    "delivered": {
+     "mean": {
+      "nearest": 2396.3,
+      "matching": 2644.9,
+      "matching_jit": 2643.4
+     },
+     "half_width": {
+      "nearest": 48.7471,
+      "matching": 37.3137,
+      "matching_jit": 37.1315
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": -248.6,
+       "half_width": 32.9551,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": -1.5,
+       "half_width": 1.8547,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "wait_for_assign_min": {
+     "mean": {
+      "nearest": 18.1181,
+      "matching": 5.8574,
+      "matching_jit": 7.6927
+     },
+     "half_width": {
+      "nearest": 1.5818,
+      "matching": 0.5834,
+      "matching_jit": 0.4267
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 12.2606,
+       "half_width": 1.0691,
+       "verdict": "",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 1.8353,
+       "half_width": 0.2247,
+       "verdict": "",
+       "days": 10
+      }
+     }
+    },
+    "utilization_pct": {
+     "mean": {
+      "nearest": 81.1525,
+      "matching": 78.6143,
+      "matching_jit": 74.3815
+     },
+     "half_width": {
+      "nearest": 1.3883,
+      "matching": 1.2697,
+      "matching_jit": 1.5106
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 2.5382,
+       "half_width": 0.4977,
+       "verdict": "",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": -4.2328,
+       "half_width": 0.4167,
+       "verdict": "",
+       "days": 10
+      }
+     }
+    },
+    "undersupplied_pct": {
+     "mean": {
+      "nearest": 45.0345,
+      "matching": 35.1034,
+      "matching_jit": 38.5517
+     },
+     "half_width": {
+      "nearest": 2.4945,
+      "matching": 3.2762,
+      "matching_jit": 2.8715
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 9.931,
+       "half_width": 3.5055,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 3.4483,
+       "half_width": 1.2949,
+       "verdict": "worse",
+       "days": 10
+      }
+     }
+    },
+    "eta_error_min": {
+     "mean": {
+      "nearest": 0.7298,
+      "matching": 0.4312,
+      "matching_jit": 0.4408
+     },
+     "half_width": {
+      "nearest": 0.033,
+      "matching": 0.0148,
+      "matching_jit": 0.0215
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": 0.2987,
+       "half_width": 0.0254,
+       "verdict": "worse",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": 0.0096,
+       "half_width": 0.014,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "prep_error_min": {
+     "mean": {
+      "nearest": 4.0813,
+      "matching": 4.0874,
+      "matching_jit": 4.0871
+     },
+     "half_width": {
+      "nearest": 0.0913,
+      "matching": 0.0893,
+      "matching_jit": 0.0892
+     },
+     "vs_baseline": {
+      "nearest": {
+       "mean": -0.0061,
+       "half_width": 0.0163,
+       "verdict": "",
+       "days": 10
+      },
+      "matching_jit": {
+       "mean": -0.0003,
+       "half_width": 0.0023,
+       "verdict": "",
+       "days": 10
+      }
+     }
+    }
+   }
+  },
+  {
+   "experiment": "information",
+   "scenario": "normal",
+   "variants": {
+    "estimates": {
+     "dispatcher": "matching_jit"
+    },
+    "perfect_prep": {
+     "dispatcher": "matching_jit",
+     "know_prep": true
+    },
+    "perfect_drive": {
+     "dispatcher": "matching_jit",
+     "know_drive": true
+    },
+    "perfect_both": {
+     "dispatcher": "matching_jit",
+     "know_prep": true,
+     "know_drive": true
+    }
+   },
+   "baseline": "estimates",
+   "days": 10,
+   "metrics": {
+    "avg_delivery_min": {
+     "mean": {
+      "estimates": 26.9143,
+      "perfect_prep": 26.0383,
+      "perfect_drive": 26.8466,
+      "perfect_both": 25.951
+     },
+     "half_width": {
+      "estimates": 0.4645,
+      "perfect_prep": 0.4142,
+      "perfect_drive": 0.5063,
+      "perfect_both": 0.4037
+     },
+     "vs_baseline": {
+      "perfect_prep": {
+       "mean": -0.876,
+       "half_width": 0.0969,
+       "verdict": "better",
+       "days": 10
+      },
+      "perfect_drive": {
+       "mean": -0.0677,
+       "half_width": 0.0646,
+       "verdict": "better",
+       "days": 10
+      },
+      "perfect_both": {
+       "mean": -0.9633,
+       "half_width": 0.1058,
+       "verdict": "better",
+       "days": 10
+      }
+     }
+    },
+    "p90_delivery_min": {
+     "mean": {
+      "estimates": 36.78,
+      "perfect_prep": 36.4065,
+      "perfect_drive": 36.6916,
+      "perfect_both": 36.289
+     },
+     "half_width": {
+      "estimates": 0.5215,
+      "perfect_prep": 0.5277,
+      "perfect_drive": 0.589,
+      "perfect_both": 0.5475
+     },
+     "vs_baseline": {
+      "perfect_prep": {
+       "mean": -0.3735,
+       "half_width": 0.1701,
+       "verdict": "better",
+       "days": 10
+      },
+      "perfect_drive": {
+       "mean": -0.0884,
+       "half_width": 0.1421,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "perfect_both": {
+       "mean": -0.491,
+       "half_width": 0.1787,
+       "verdict": "better",
+       "days": 10
+      }
+     }
+    },
+    "late_pct": {
+     "mean": {
+      "estimates": 7.3034,
+      "perfect_prep": 7.3571,
+      "perfect_drive": 6.9046,
+      "perfect_both": 7.0267
+     },
+     "half_width": {
+      "estimates": 0.7923,
+      "perfect_prep": 0.6535,
+      "perfect_drive": 0.7173,
+      "perfect_both": 0.6812
+     },
+     "vs_baseline": {
+      "perfect_prep": {
+       "mean": 0.0537,
+       "half_width": 0.3758,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "perfect_drive": {
+       "mean": -0.3988,
+       "half_width": 0.3362,
+       "verdict": "better",
+       "days": 10
+      },
+      "perfect_both": {
+       "mean": -0.2767,
+       "half_width": 0.2832,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "severe_late_pct": {
+     "mean": {
+      "estimates": 0.1728,
+      "perfect_prep": 0.1281,
+      "perfect_drive": 0.1776,
+      "perfect_both": 0.1283
+     },
+     "half_width": {
+      "estimates": 0.1278,
+      "perfect_prep": 0.1147,
+      "perfect_drive": 0.1518,
+      "perfect_both": 0.0883
+     },
+     "vs_baseline": {
+      "perfect_prep": {
+       "mean": -0.0446,
+       "half_width": 0.0352,
+       "verdict": "better",
+       "days": 10
+      },
+      "perfect_drive": {
+       "mean": 0.0048,
+       "half_width": 0.0349,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "perfect_both": {
+       "mean": -0.0444,
+       "half_width": 0.0559,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "unfulfilled_pct": {
+     "mean": {
+      "estimates": 0.0244,
+      "perfect_prep": 0.0244,
+      "perfect_drive": 0.034,
+      "perfect_both": 0.0292
+     },
+     "half_width": {
+      "estimates": 0.0247,
+      "perfect_prep": 0.0247,
+      "perfect_drive": 0.033,
+      "perfect_both": 0.0295
+     },
+     "vs_baseline": {
+      "perfect_prep": {
+       "mean": 0.0,
+       "half_width": 0.0,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "perfect_drive": {
+       "mean": 0.0097,
+       "half_width": 0.0146,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "perfect_both": {
+       "mean": 0.0049,
+       "half_width": 0.0111,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "food_wait_min": {
+     "mean": {
+      "estimates": 2.237,
+      "perfect_prep": 1.3536,
+      "perfect_drive": 2.1655,
+      "perfect_both": 1.2615
+     },
+     "half_width": {
+      "estimates": 0.3442,
+      "perfect_prep": 0.304,
+      "perfect_drive": 0.3682,
+      "perfect_both": 0.3011
+     },
+     "vs_baseline": {
+      "perfect_prep": {
+       "mean": -0.8835,
+       "half_width": 0.0957,
+       "verdict": "better",
+       "days": 10
+      },
+      "perfect_drive": {
+       "mean": -0.0715,
+       "half_width": 0.0649,
+       "verdict": "better",
+       "days": 10
+      },
+      "perfect_both": {
+       "mean": -0.9756,
+       "half_width": 0.1061,
+       "verdict": "better",
+       "days": 10
+      }
+     }
+    },
+    "ready_to_door_min": {
+     "mean": {
+      "estimates": 12.1407,
+      "perfect_prep": 11.2662,
+      "perfect_drive": 12.0714,
+      "perfect_both": 11.1775
+     },
+     "half_width": {
+      "estimates": 0.3935,
+      "perfect_prep": 0.3516,
+      "perfect_drive": 0.4237,
+      "perfect_both": 0.3447
+     },
+     "vs_baseline": {
+      "perfect_prep": {
+       "mean": -0.8746,
+       "half_width": 0.0937,
+       "verdict": "better",
+       "days": 10
+      },
+      "perfect_drive": {
+       "mean": -0.0693,
+       "half_width": 0.0645,
+       "verdict": "better",
+       "days": 10
+      },
+      "perfect_both": {
+       "mean": -0.9633,
+       "half_width": 0.1043,
+       "verdict": "better",
+       "days": 10
+      }
+     }
+    },
+    "promise_bias_min": {
+     "mean": {
+      "estimates": -7.8544,
+      "perfect_prep": -8.7318,
+      "perfect_drive": -7.9239,
+      "perfect_both": -8.8212
+     },
+     "half_width": {
+      "estimates": 0.3528,
+      "perfect_prep": 0.3158,
+      "perfect_drive": 0.3766,
+      "perfect_both": 0.3099
+     },
+     "vs_baseline": {
+      "perfect_prep": {
+       "mean": -0.8774,
+       "half_width": 0.0972,
+       "verdict": "",
+       "days": 10
+      },
+      "perfect_drive": {
+       "mean": -0.0695,
+       "half_width": 0.0633,
+       "verdict": "",
+       "days": 10
+      },
+      "perfect_both": {
+       "mean": -0.9668,
+       "half_width": 0.1062,
+       "verdict": "",
+       "days": 10
+      }
+     }
+    },
+    "active_min_per_delivery": {
+     "mean": {
+      "estimates": 22.2303,
+      "perfect_prep": 21.0558,
+      "perfect_drive": 22.1454,
+      "perfect_both": 20.9474
+     },
+     "half_width": {
+      "estimates": 0.1765,
+      "perfect_prep": 0.154,
+      "perfect_drive": 0.1892,
+      "perfect_both": 0.1884
+     },
+     "vs_baseline": {
+      "perfect_prep": {
+       "mean": -1.1745,
+       "half_width": 0.1098,
+       "verdict": "better",
+       "days": 10
+      },
+      "perfect_drive": {
+       "mean": -0.0849,
+       "half_width": 0.0543,
+       "verdict": "better",
+       "days": 10
+      },
+      "perfect_both": {
+       "mean": -1.2829,
+       "half_width": 0.1116,
+       "verdict": "better",
+       "days": 10
+      }
+     }
+    },
+    "pickup_drive_min": {
+     "mean": {
+      "estimates": 7.4303,
+      "perfect_prep": 7.2358,
+      "perfect_drive": 7.2931,
+      "perfect_both": 7.0938
+     },
+     "half_width": {
+      "estimates": 0.1893,
+      "perfect_prep": 0.2184,
+      "perfect_drive": 0.1941,
+      "perfect_both": 0.2685
+     },
+     "vs_baseline": {
+      "perfect_prep": {
+       "mean": -0.1945,
+       "half_width": 0.1525,
+       "verdict": "better",
+       "days": 10
+      },
+      "perfect_drive": {
+       "mean": -0.1372,
+       "half_width": 0.064,
+       "verdict": "better",
+       "days": 10
+      },
+      "perfect_both": {
+       "mean": -0.3365,
+       "half_width": 0.1372,
+       "verdict": "better",
+       "days": 10
+      }
+     }
+    },
+    "driver_wait_min": {
+     "mean": {
+      "estimates": 4.1038,
+      "perfect_prep": 3.39,
+      "perfect_drive": 4.1725,
+      "perfect_both": 3.4476
+     },
+     "half_width": {
+      "estimates": 0.1993,
+      "perfect_prep": 0.2193,
+      "perfect_drive": 0.1955,
+      "perfect_both": 0.2277
+     },
+     "vs_baseline": {
+      "perfect_prep": {
+       "mean": -0.7139,
+       "half_width": 0.0963,
+       "verdict": "better",
+       "days": 10
+      },
+      "perfect_drive": {
+       "mean": 0.0687,
+       "half_width": 0.023,
+       "verdict": "worse",
+       "days": 10
+      },
+      "perfect_both": {
+       "mean": -0.6562,
+       "half_width": 0.0889,
+       "verdict": "better",
+       "days": 10
+      }
+     }
+    },
+    "km_per_delivery": {
+     "mean": {
+      "estimates": 6.3541,
+      "perfect_prep": 6.2497,
+      "perfect_drive": 6.2365,
+      "perfect_both": 6.1501
+     },
+     "half_width": {
+      "estimates": 0.1094,
+      "perfect_prep": 0.1337,
+      "perfect_drive": 0.1127,
+      "perfect_both": 0.1564
+     },
+     "vs_baseline": {
+      "perfect_prep": {
+       "mean": -0.1044,
+       "half_width": 0.0938,
+       "verdict": "better",
+       "days": 10
+      },
+      "perfect_drive": {
+       "mean": -0.1176,
+       "half_width": 0.0294,
+       "verdict": "better",
+       "days": 10
+      },
+      "perfect_both": {
+       "mean": -0.204,
+       "half_width": 0.0806,
+       "verdict": "better",
+       "days": 10
+      }
+     }
+    },
+    "deliveries_per_driver_hour": {
+     "mean": {
+      "estimates": 1.5842,
+      "perfect_prep": 1.5885,
+      "perfect_drive": 1.5838,
+      "perfect_both": 1.588
+     },
+     "half_width": {
+      "estimates": 0.0437,
+      "perfect_prep": 0.0432,
+      "perfect_drive": 0.043,
+      "perfect_both": 0.043
+     },
+     "vs_baseline": {
+      "perfect_prep": {
+       "mean": 0.0043,
+       "half_width": 0.0012,
+       "verdict": "better",
+       "days": 10
+      },
+      "perfect_drive": {
+       "mean": -0.0004,
+       "half_width": 0.0018,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "perfect_both": {
+       "mean": 0.0038,
+       "half_width": 0.0013,
+       "verdict": "better",
+       "days": 10
+      }
+     }
+    },
+    "driver_gini": {
+     "mean": {
+      "estimates": 0.1645,
+      "perfect_prep": 0.1739,
+      "perfect_drive": 0.1641,
+      "perfect_both": 0.1717
+     },
+     "half_width": {
+      "estimates": 0.0087,
+      "perfect_prep": 0.0097,
+      "perfect_drive": 0.0082,
+      "perfect_both": 0.0088
+     },
+     "vs_baseline": {
+      "perfect_prep": {
+       "mean": 0.0095,
+       "half_width": 0.0058,
+       "verdict": "worse",
+       "days": 10
+      },
+      "perfect_drive": {
+       "mean": -0.0003,
+       "half_width": 0.0025,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "perfect_both": {
+       "mean": 0.0072,
+       "half_width": 0.0057,
+       "verdict": "worse",
+       "days": 10
+      }
+     }
+    },
+    "decline_pct": {
+     "mean": {
+      "estimates": 17.2648,
+      "perfect_prep": 17.2993,
+      "perfect_drive": 17.7179,
+      "perfect_both": 17.466
+     },
+     "half_width": {
+      "estimates": 0.8019,
+      "perfect_prep": 1.098,
+      "perfect_drive": 1.147,
+      "perfect_both": 1.1569
+     },
+     "vs_baseline": {
+      "perfect_prep": {
+       "mean": 0.0345,
+       "half_width": 1.2881,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "perfect_drive": {
+       "mean": 0.4531,
+       "half_width": 0.7335,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "perfect_both": {
+       "mean": 0.2012,
+       "half_width": 1.0203,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "delivered": {
+     "mean": {
+      "estimates": 2053.4,
+      "perfect_prep": 2053.7,
+      "perfect_drive": 2052.7,
+      "perfect_both": 2052.8
+     },
+     "half_width": {
+      "estimates": 21.6748,
+      "perfect_prep": 21.9895,
+      "perfect_drive": 22.0927,
+      "perfect_both": 21.8748
+     },
+     "vs_baseline": {
+      "perfect_prep": {
+       "mean": 0.3,
+       "half_width": 1.2182,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "perfect_drive": {
+       "mean": -0.7,
+       "half_width": 0.8954,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "perfect_both": {
+       "mean": -0.6,
+       "half_width": 1.1779,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "wait_for_assign_min": {
+     "mean": {
+      "estimates": 4.684,
+      "perfect_prep": 4.9825,
+      "perfect_drive": 4.7012,
+      "perfect_both": 5.0036
+     },
+     "half_width": {
+      "estimates": 0.347,
+      "perfect_prep": 0.2654,
+      "perfect_drive": 0.3731,
+      "perfect_both": 0.2349
+     },
+     "vs_baseline": {
+      "perfect_prep": {
+       "mean": 0.2985,
+       "half_width": 0.1451,
+       "verdict": "",
+       "days": 10
+      },
+      "perfect_drive": {
+       "mean": 0.0172,
+       "half_width": 0.0742,
+       "verdict": "",
+       "days": 10
+      },
+      "perfect_both": {
+       "mean": 0.3196,
+       "half_width": 0.1531,
+       "verdict": "",
+       "days": 10
+      }
+     }
+    },
+    "utilization_pct": {
+     "mean": {
+      "estimates": 59.1118,
+      "perfect_prep": 56.1287,
+      "perfect_drive": 58.8877,
+      "perfect_both": 55.8467
+     },
+     "half_width": {
+      "estimates": 1.7334,
+      "perfect_prep": 1.7358,
+      "perfect_drive": 1.6811,
+      "perfect_both": 1.8139
+     },
+     "vs_baseline": {
+      "perfect_prep": {
+       "mean": -2.983,
+       "half_width": 0.2595,
+       "verdict": "",
+       "days": 10
+      },
+      "perfect_drive": {
+       "mean": -0.2241,
+       "half_width": 0.1651,
+       "verdict": "",
+       "days": 10
+      },
+      "perfect_both": {
+       "mean": -3.2651,
+       "half_width": 0.2566,
+       "verdict": "",
+       "days": 10
+      }
+     }
+    },
+    "undersupplied_pct": {
+     "mean": {
+      "estimates": 16.3448,
+      "perfect_prep": 14.8276,
+      "perfect_drive": 16.2759,
+      "perfect_both": 14.6207
+     },
+     "half_width": {
+      "estimates": 2.8106,
+      "perfect_prep": 2.9532,
+      "perfect_drive": 2.9252,
+      "perfect_both": 2.8178
+     },
+     "vs_baseline": {
+      "perfect_prep": {
+       "mean": -1.5172,
+       "half_width": 0.6899,
+       "verdict": "better",
+       "days": 10
+      },
+      "perfect_drive": {
+       "mean": -0.069,
+       "half_width": 0.8529,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "perfect_both": {
+       "mean": -1.7241,
+       "half_width": 0.5329,
+       "verdict": "better",
+       "days": 10
+      }
+     }
+    },
+    "eta_error_min": {
+     "mean": {
+      "estimates": 0.4391,
+      "perfect_prep": 0.4285,
+      "perfect_drive": 0.0,
+      "perfect_both": 0.0
+     },
+     "half_width": {
+      "estimates": 0.0177,
+      "perfect_prep": 0.0169,
+      "perfect_drive": 0.0,
+      "perfect_both": 0.0
+     },
+     "vs_baseline": {
+      "perfect_prep": {
+       "mean": -0.0106,
+       "half_width": 0.0101,
+       "verdict": "better",
+       "days": 10
+      },
+      "perfect_drive": {
+       "mean": -0.4391,
+       "half_width": 0.0177,
+       "verdict": "better",
+       "days": 10
+      },
+      "perfect_both": {
+       "mean": -0.4391,
+       "half_width": 0.0177,
+       "verdict": "better",
+       "days": 10
+      }
+     }
+    },
+    "prep_error_min": {
+     "mean": {
+      "estimates": 4.0917,
+      "perfect_prep": 0.0,
+      "perfect_drive": 4.0921,
+      "perfect_both": 0.0
+     },
+     "half_width": {
+      "estimates": 0.077,
+      "perfect_prep": 0.0,
+      "perfect_drive": 0.0765,
+      "perfect_both": 0.0
+     },
+     "vs_baseline": {
+      "perfect_prep": {
+       "mean": -4.0917,
+       "half_width": 0.077,
+       "verdict": "",
+       "days": 10
+      },
+      "perfect_drive": {
+       "mean": 0.0005,
+       "half_width": 0.0013,
+       "verdict": "",
+       "days": 10
+      },
+      "perfect_both": {
+       "mean": -4.0917,
+       "half_width": 0.077,
+       "verdict": "",
+       "days": 10
+      }
+     }
+    }
+   }
+  },
+  {
+   "experiment": "jit_buffer",
+   "scenario": "normal",
+   "variants": {
+    "0s": {
+     "dispatcher": "matching_jit",
+     "jit_buffer_s": 0.0
+    },
+    "60s": {
+     "dispatcher": "matching_jit",
+     "jit_buffer_s": 60.0
+    },
+    "120s": {
+     "dispatcher": "matching_jit",
+     "jit_buffer_s": 120.0
+    },
+    "240s": {
+     "dispatcher": "matching_jit",
+     "jit_buffer_s": 240.0
+    },
+    "480s": {
+     "dispatcher": "matching_jit",
+     "jit_buffer_s": 480.0
+    },
+    "900s": {
+     "dispatcher": "matching_jit",
+     "jit_buffer_s": 900.0
+    },
+    "no_hold": {
+     "dispatcher": "matching"
+    }
+   },
+   "baseline": "no_hold",
+   "days": 10,
+   "metrics": {
+    "avg_delivery_min": {
+     "mean": {
+      "0s": 28.6059,
+      "60s": 28.0192,
+      "120s": 27.5758,
+      "240s": 26.9143,
+      "480s": 26.3173,
+      "900s": 26.2424,
+      "no_hold": 26.2517
+     },
+     "half_width": {
+      "0s": 0.475,
+      "60s": 0.4557,
+      "120s": 0.5232,
+      "240s": 0.4645,
+      "480s": 0.504,
+      "900s": 0.4828,
+      "no_hold": 0.4947
+     },
+     "vs_baseline": {
+      "0s": {
+       "mean": 2.3543,
+       "half_width": 0.1218,
+       "verdict": "worse",
+       "days": 10
+      },
+      "60s": {
+       "mean": 1.7675,
+       "half_width": 0.1659,
+       "verdict": "worse",
+       "days": 10
+      },
+      "120s": {
+       "mean": 1.3242,
+       "half_width": 0.1312,
+       "verdict": "worse",
+       "days": 10
+      },
+      "240s": {
+       "mean": 0.6626,
+       "half_width": 0.1265,
+       "verdict": "worse",
+       "days": 10
+      },
+      "480s": {
+       "mean": 0.0656,
+       "half_width": 0.0841,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "900s": {
+       "mean": -0.0093,
+       "half_width": 0.0391,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "p90_delivery_min": {
+     "mean": {
+      "0s": 38.0569,
+      "60s": 37.5346,
+      "120s": 37.3446,
+      "240s": 36.78,
+      "480s": 36.2634,
+      "900s": 36.2014,
+      "no_hold": 36.2676
+     },
+     "half_width": {
+      "0s": 0.5017,
+      "60s": 0.5157,
+      "120s": 0.5903,
+      "240s": 0.5215,
+      "480s": 0.575,
+      "900s": 0.5446,
+      "no_hold": 0.5474
+     },
+     "vs_baseline": {
+      "0s": {
+       "mean": 1.7893,
+       "half_width": 0.2636,
+       "verdict": "worse",
+       "days": 10
+      },
+      "60s": {
+       "mean": 1.267,
+       "half_width": 0.2308,
+       "verdict": "worse",
+       "days": 10
+      },
+      "120s": {
+       "mean": 1.0771,
+       "half_width": 0.2631,
+       "verdict": "worse",
+       "days": 10
+      },
+      "240s": {
+       "mean": 0.5124,
+       "half_width": 0.2329,
+       "verdict": "worse",
+       "days": 10
+      },
+      "480s": {
+       "mean": -0.0041,
+       "half_width": 0.2353,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "900s": {
+       "mean": -0.0661,
+       "half_width": 0.1579,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "late_pct": {
+     "mean": {
+      "0s": 8.599,
+      "60s": 7.9935,
+      "120s": 7.717,
+      "240s": 7.3034,
+      "480s": 6.7183,
+      "900s": 6.8507,
+      "no_hold": 6.7688
+     },
+     "half_width": {
+      "0s": 0.8059,
+      "60s": 0.846,
+      "120s": 1.1821,
+      "240s": 0.7923,
+      "480s": 0.6343,
+      "900s": 0.8046,
+      "no_hold": 0.6621
+     },
+     "vs_baseline": {
+      "0s": {
+       "mean": 1.8302,
+       "half_width": 0.4084,
+       "verdict": "worse",
+       "days": 10
+      },
+      "60s": {
+       "mean": 1.2247,
+       "half_width": 0.5398,
+       "verdict": "worse",
+       "days": 10
+      },
+      "120s": {
+       "mean": 0.9482,
+       "half_width": 0.7604,
+       "verdict": "worse",
+       "days": 10
+      },
+      "240s": {
+       "mean": 0.5345,
+       "half_width": 0.4737,
+       "verdict": "worse",
+       "days": 10
+      },
+      "480s": {
+       "mean": -0.0505,
+       "half_width": 0.2908,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "900s": {
+       "mean": 0.0819,
+       "half_width": 0.3316,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "severe_late_pct": {
+     "mean": {
+      "0s": 0.2165,
+      "60s": 0.1673,
+      "120s": 0.1817,
+      "240s": 0.1728,
+      "480s": 0.1919,
+      "900s": 0.1719,
+      "no_hold": 0.1869
+     },
+     "half_width": {
+      "0s": 0.1933,
+      "60s": 0.1415,
+      "120s": 0.1853,
+      "240s": 0.1278,
+      "480s": 0.1648,
+      "900s": 0.1581,
+      "no_hold": 0.1483
+     },
+     "vs_baseline": {
+      "0s": {
+       "mean": 0.0295,
+       "half_width": 0.0744,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "60s": {
+       "mean": -0.0196,
+       "half_width": 0.0296,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "120s": {
+       "mean": -0.0052,
+       "half_width": 0.0417,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "240s": {
+       "mean": -0.0142,
+       "half_width": 0.0527,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "480s": {
+       "mean": 0.005,
+       "half_width": 0.0609,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "900s": {
+       "mean": -0.015,
+       "half_width": 0.0526,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "unfulfilled_pct": {
+     "mean": {
+      "0s": 0.0244,
+      "60s": 0.0244,
+      "120s": 0.0439,
+      "240s": 0.0244,
+      "480s": 0.0292,
+      "900s": 0.0292,
+      "no_hold": 0.0244
+     },
+     "half_width": {
+      "0s": 0.0247,
+      "60s": 0.0247,
+      "120s": 0.0479,
+      "240s": 0.0247,
+      "480s": 0.0295,
+      "900s": 0.0295,
+      "no_hold": 0.0247
+     },
+     "vs_baseline": {
+      "0s": {
+       "mean": 0.0,
+       "half_width": 0.0,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "60s": {
+       "mean": 0.0,
+       "half_width": 0.0,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "120s": {
+       "mean": 0.0195,
+       "half_width": 0.0338,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "240s": {
+       "mean": 0.0,
+       "half_width": 0.0,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "480s": {
+       "mean": 0.0049,
+       "half_width": 0.0111,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "900s": {
+       "mean": 0.0049,
+       "half_width": 0.0111,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "food_wait_min": {
+     "mean": {
+      "0s": 3.9368,
+      "60s": 3.3442,
+      "120s": 2.8986,
+      "240s": 2.237,
+      "480s": 1.6327,
+      "900s": 1.5599,
+      "no_hold": 1.5665
+     },
+     "half_width": {
+      "0s": 0.3295,
+      "60s": 0.3192,
+      "120s": 0.3919,
+      "240s": 0.3442,
+      "480s": 0.3961,
+      "900s": 0.3816,
+      "no_hold": 0.3936
+     },
+     "vs_baseline": {
+      "0s": {
+       "mean": 2.3703,
+       "half_width": 0.1242,
+       "verdict": "worse",
+       "days": 10
+      },
+      "60s": {
+       "mean": 1.7778,
+       "half_width": 0.1686,
+       "verdict": "worse",
+       "days": 10
+      },
+      "120s": {
+       "mean": 1.3322,
+       "half_width": 0.1344,
+       "verdict": "worse",
+       "days": 10
+      },
+      "240s": {
+       "mean": 0.6705,
+       "half_width": 0.1274,
+       "verdict": "worse",
+       "days": 10
+      },
+      "480s": {
+       "mean": 0.0662,
+       "half_width": 0.0875,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "900s": {
+       "mean": -0.0066,
+       "half_width": 0.0404,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "ready_to_door_min": {
+     "mean": {
+      "0s": 13.8294,
+      "60s": 13.2419,
+      "120s": 12.7988,
+      "240s": 12.1407,
+      "480s": 11.5417,
+      "900s": 11.4701,
+      "no_hold": 11.4773
+     },
+     "half_width": {
+      "0s": 0.3844,
+      "60s": 0.368,
+      "120s": 0.4429,
+      "240s": 0.3935,
+      "480s": 0.4477,
+      "900s": 0.4379,
+      "no_hold": 0.4519
+     },
+     "vs_baseline": {
+      "0s": {
+       "mean": 2.3521,
+       "half_width": 0.1224,
+       "verdict": "worse",
+       "days": 10
+      },
+      "60s": {
+       "mean": 1.7646,
+       "half_width": 0.1656,
+       "verdict": "worse",
+       "days": 10
+      },
+      "120s": {
+       "mean": 1.3215,
+       "half_width": 0.1322,
+       "verdict": "worse",
+       "days": 10
+      },
+      "240s": {
+       "mean": 0.6634,
+       "half_width": 0.1259,
+       "verdict": "worse",
+       "days": 10
+      },
+      "480s": {
+       "mean": 0.0644,
+       "half_width": 0.0859,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "900s": {
+       "mean": -0.0072,
+       "half_width": 0.0403,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "promise_bias_min": {
+     "mean": {
+      "0s": -6.1638,
+      "60s": -6.751,
+      "120s": -7.1951,
+      "240s": -7.8544,
+      "480s": -8.4539,
+      "900s": -8.5289,
+      "no_hold": -8.52
+     },
+     "half_width": {
+      "0s": 0.3395,
+      "60s": 0.3262,
+      "120s": 0.4016,
+      "240s": 0.3528,
+      "480s": 0.4013,
+      "900s": 0.3841,
+      "no_hold": 0.3975
+     },
+     "vs_baseline": {
+      "0s": {
+       "mean": 2.3562,
+       "half_width": 0.1231,
+       "verdict": "",
+       "days": 10
+      },
+      "60s": {
+       "mean": 1.769,
+       "half_width": 0.167,
+       "verdict": "",
+       "days": 10
+      },
+      "120s": {
+       "mean": 1.325,
+       "half_width": 0.1333,
+       "verdict": "",
+       "days": 10
+      },
+      "240s": {
+       "mean": 0.6657,
+       "half_width": 0.1258,
+       "verdict": "",
+       "days": 10
+      },
+      "480s": {
+       "mean": 0.0661,
+       "half_width": 0.0846,
+       "verdict": "",
+       "days": 10
+      },
+      "900s": {
+       "mean": -0.0089,
+       "half_width": 0.0405,
+       "verdict": "",
+       "days": 10
+      }
+     }
+    },
+    "active_min_per_delivery": {
+     "mean": {
+      "0s": 20.8737,
+      "60s": 21.1475,
+      "120s": 21.4707,
+      "240s": 22.2303,
+      "480s": 23.517,
+      "900s": 24.4913,
+      "no_hold": 24.5435
+     },
+     "half_width": {
+      "0s": 0.2447,
+      "60s": 0.2185,
+      "120s": 0.2414,
+      "240s": 0.1765,
+      "480s": 0.194,
+      "900s": 0.3246,
+      "no_hold": 0.3241
+     },
+     "vs_baseline": {
+      "0s": {
+       "mean": -3.6698,
+       "half_width": 0.3737,
+       "verdict": "better",
+       "days": 10
+      },
+      "60s": {
+       "mean": -3.396,
+       "half_width": 0.3659,
+       "verdict": "better",
+       "days": 10
+      },
+      "120s": {
+       "mean": -3.0728,
+       "half_width": 0.3339,
+       "verdict": "better",
+       "days": 10
+      },
+      "240s": {
+       "mean": -2.3132,
+       "half_width": 0.2569,
+       "verdict": "better",
+       "days": 10
+      },
+      "480s": {
+       "mean": -1.0265,
+       "half_width": 0.1452,
+       "verdict": "better",
+       "days": 10
+      },
+      "900s": {
+       "mean": -0.0521,
+       "half_width": 0.0355,
+       "verdict": "better",
+       "days": 10
+      }
+     }
+    },
+    "pickup_drive_min": {
+     "mean": {
+      "0s": 7.5228,
+      "60s": 7.4682,
+      "120s": 7.4361,
+      "240s": 7.4303,
+      "480s": 7.1732,
+      "900s": 7.0858,
+      "no_hold": 7.0536
+     },
+     "half_width": {
+      "0s": 0.2368,
+      "60s": 0.2253,
+      "120s": 0.252,
+      "240s": 0.1893,
+      "480s": 0.1333,
+      "900s": 0.1231,
+      "no_hold": 0.1494
+     },
+     "vs_baseline": {
+      "0s": {
+       "mean": 0.4692,
+       "half_width": 0.1861,
+       "verdict": "worse",
+       "days": 10
+      },
+      "60s": {
+       "mean": 0.4146,
+       "half_width": 0.2179,
+       "verdict": "worse",
+       "days": 10
+      },
+      "120s": {
+       "mean": 0.3824,
+       "half_width": 0.2123,
+       "verdict": "worse",
+       "days": 10
+      },
+      "240s": {
+       "mean": 0.3767,
+       "half_width": 0.1544,
+       "verdict": "worse",
+       "days": 10
+      },
+      "480s": {
+       "mean": 0.1195,
+       "half_width": 0.0951,
+       "verdict": "worse",
+       "days": 10
+      },
+      "900s": {
+       "mean": 0.0322,
+       "half_width": 0.1036,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "driver_wait_min": {
+     "mean": {
+      "0s": 2.1987,
+      "60s": 2.6518,
+      "120s": 3.1366,
+      "240s": 4.1038,
+      "480s": 5.8692,
+      "900s": 6.9711,
+      "no_hold": 7.0577
+     },
+     "half_width": {
+      "0s": 0.1067,
+      "60s": 0.116,
+      "120s": 0.1349,
+      "240s": 0.1993,
+      "480s": 0.3115,
+      "900s": 0.4261,
+      "no_hold": 0.4549
+     },
+     "vs_baseline": {
+      "0s": {
+       "mean": -4.8589,
+       "half_width": 0.3629,
+       "verdict": "better",
+       "days": 10
+      },
+      "60s": {
+       "mean": -4.4059,
+       "half_width": 0.3556,
+       "verdict": "better",
+       "days": 10
+      },
+      "120s": {
+       "mean": -3.9211,
+       "half_width": 0.34,
+       "verdict": "better",
+       "days": 10
+      },
+      "240s": {
+       "mean": -2.9538,
+       "half_width": 0.279,
+       "verdict": "better",
+       "days": 10
+      },
+      "480s": {
+       "mean": -1.1884,
+       "half_width": 0.1649,
+       "verdict": "better",
+       "days": 10
+      },
+      "900s": {
+       "mean": -0.0866,
+       "half_width": 0.0885,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "km_per_delivery": {
+     "mean": {
+      "0s": 6.4296,
+      "60s": 6.3987,
+      "120s": 6.3795,
+      "240s": 6.3541,
+      "480s": 6.2129,
+      "900s": 6.1569,
+      "no_hold": 6.1496
+     },
+     "half_width": {
+      "0s": 0.1336,
+      "60s": 0.1416,
+      "120s": 0.1512,
+      "240s": 0.1094,
+      "480s": 0.0849,
+      "900s": 0.0809,
+      "no_hold": 0.0958
+     },
+     "vs_baseline": {
+      "0s": {
+       "mean": 0.28,
+       "half_width": 0.0978,
+       "verdict": "worse",
+       "days": 10
+      },
+      "60s": {
+       "mean": 0.249,
+       "half_width": 0.1358,
+       "verdict": "worse",
+       "days": 10
+      },
+      "120s": {
+       "mean": 0.2298,
+       "half_width": 0.1291,
+       "verdict": "worse",
+       "days": 10
+      },
+      "240s": {
+       "mean": 0.2045,
+       "half_width": 0.0877,
+       "verdict": "worse",
+       "days": 10
+      },
+      "480s": {
+       "mean": 0.0633,
+       "half_width": 0.0516,
+       "verdict": "worse",
+       "days": 10
+      },
+      "900s": {
+       "mean": 0.0072,
+       "half_width": 0.0607,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "deliveries_per_driver_hour": {
+     "mean": {
+      "0s": 1.5845,
+      "60s": 1.5851,
+      "120s": 1.5834,
+      "240s": 1.5842,
+      "480s": 1.5812,
+      "900s": 1.5795,
+      "no_hold": 1.5781
+     },
+     "half_width": {
+      "0s": 0.0424,
+      "60s": 0.043,
+      "120s": 0.0437,
+      "240s": 0.0437,
+      "480s": 0.0431,
+      "900s": 0.0441,
+      "no_hold": 0.0429
+     },
+     "vs_baseline": {
+      "0s": {
+       "mean": 0.0064,
+       "half_width": 0.0028,
+       "verdict": "better",
+       "days": 10
+      },
+      "60s": {
+       "mean": 0.0071,
+       "half_width": 0.0032,
+       "verdict": "better",
+       "days": 10
+      },
+      "120s": {
+       "mean": 0.0053,
+       "half_width": 0.0036,
+       "verdict": "better",
+       "days": 10
+      },
+      "240s": {
+       "mean": 0.0061,
+       "half_width": 0.0029,
+       "verdict": "better",
+       "days": 10
+      },
+      "480s": {
+       "mean": 0.0032,
+       "half_width": 0.0021,
+       "verdict": "better",
+       "days": 10
+      },
+      "900s": {
+       "mean": 0.0015,
+       "half_width": 0.0031,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "driver_gini": {
+     "mean": {
+      "0s": 0.1747,
+      "60s": 0.1676,
+      "120s": 0.167,
+      "240s": 0.1645,
+      "480s": 0.1579,
+      "900s": 0.1564,
+      "no_hold": 0.1554
+     },
+     "half_width": {
+      "0s": 0.0101,
+      "60s": 0.0083,
+      "120s": 0.0097,
+      "240s": 0.0087,
+      "480s": 0.0099,
+      "900s": 0.0086,
+      "no_hold": 0.0083
+     },
+     "vs_baseline": {
+      "0s": {
+       "mean": 0.0193,
+       "half_width": 0.0074,
+       "verdict": "worse",
+       "days": 10
+      },
+      "60s": {
+       "mean": 0.0122,
+       "half_width": 0.0059,
+       "verdict": "worse",
+       "days": 10
+      },
+      "120s": {
+       "mean": 0.0116,
+       "half_width": 0.0054,
+       "verdict": "worse",
+       "days": 10
+      },
+      "240s": {
+       "mean": 0.0091,
+       "half_width": 0.0041,
+       "verdict": "worse",
+       "days": 10
+      },
+      "480s": {
+       "mean": 0.0025,
+       "half_width": 0.0054,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "900s": {
+       "mean": 0.001,
+       "half_width": 0.0046,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "decline_pct": {
+     "mean": {
+      "0s": 17.6314,
+      "60s": 17.6024,
+      "120s": 17.2703,
+      "240s": 17.2648,
+      "480s": 16.9747,
+      "900s": 16.84,
+      "no_hold": 16.545
+     },
+     "half_width": {
+      "0s": 1.1577,
+      "60s": 1.0413,
+      "120s": 0.8169,
+      "240s": 0.8019,
+      "480s": 0.8221,
+      "900s": 0.7069,
+      "no_hold": 0.8752
+     },
+     "vs_baseline": {
+      "0s": {
+       "mean": 1.0864,
+       "half_width": 1.0944,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "60s": {
+       "mean": 1.0574,
+       "half_width": 0.9366,
+       "verdict": "worse",
+       "days": 10
+      },
+      "120s": {
+       "mean": 0.7253,
+       "half_width": 0.7742,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "240s": {
+       "mean": 0.7198,
+       "half_width": 0.6271,
+       "verdict": "worse",
+       "days": 10
+      },
+      "480s": {
+       "mean": 0.4297,
+       "half_width": 0.7116,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "900s": {
+       "mean": 0.2951,
+       "half_width": 0.6254,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "delivered": {
+     "mean": {
+      "0s": 2051.1,
+      "60s": 2050.9,
+      "120s": 2051.1,
+      "240s": 2053.4,
+      "480s": 2052.9,
+      "900s": 2054.3,
+      "no_hold": 2053.2
+     },
+     "half_width": {
+      "0s": 21.8192,
+      "60s": 21.4009,
+      "120s": 22.068,
+      "240s": 21.6748,
+      "480s": 22.2757,
+      "900s": 22.3231,
+      "no_hold": 22.1306
+     },
+     "vs_baseline": {
+      "0s": {
+       "mean": -2.1,
+       "half_width": 1.1899,
+       "verdict": "worse",
+       "days": 10
+      },
+      "60s": {
+       "mean": -2.3,
+       "half_width": 1.5472,
+       "verdict": "worse",
+       "days": 10
+      },
+      "120s": {
+       "mean": -2.1,
+       "half_width": 1.0901,
+       "verdict": "worse",
+       "days": 10
+      },
+      "240s": {
+       "mean": 0.2,
+       "half_width": 0.8121,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "480s": {
+       "mean": -0.3,
+       "half_width": 0.8954,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "900s": {
+       "mean": 1.1,
+       "half_width": 0.9803,
+       "verdict": "better",
+       "days": 10
+      }
+     }
+    },
+    "wait_for_assign_min": {
+     "mean": {
+      "0s": 7.7323,
+      "60s": 6.8717,
+      "120s": 6.1051,
+      "240s": 4.684,
+      "480s": 2.8003,
+      "900s": 1.751,
+      "no_hold": 1.7082
+     },
+     "half_width": {
+      "0s": 0.2594,
+      "60s": 0.2643,
+      "120s": 0.3234,
+      "240s": 0.347,
+      "480s": 0.4876,
+      "900s": 0.5569,
+      "no_hold": 0.567
+     },
+     "vs_baseline": {
+      "0s": {
+       "mean": 6.0241,
+       "half_width": 0.4351,
+       "verdict": "",
+       "days": 10
+      },
+      "60s": {
+       "mean": 5.1635,
+       "half_width": 0.4221,
+       "verdict": "",
+       "days": 10
+      },
+      "120s": {
+       "mean": 4.3969,
+       "half_width": 0.3362,
+       "verdict": "",
+       "days": 10
+      },
+      "240s": {
+       "mean": 2.9758,
+       "half_width": 0.3007,
+       "verdict": "",
+       "days": 10
+      },
+      "480s": {
+       "mean": 1.0921,
+       "half_width": 0.1572,
+       "verdict": "",
+       "days": 10
+      },
+      "900s": {
+       "mean": 0.0429,
+       "half_width": 0.0222,
+       "verdict": "",
+       "days": 10
+      }
+     }
+    },
+    "utilization_pct": {
+     "mean": {
+      "0s": 55.5449,
+      "60s": 56.313,
+      "120s": 57.1142,
+      "240s": 59.1118,
+      "480s": 62.4371,
+      "900s": 64.8993,
+      "no_hold": 65.0126
+     },
+     "half_width": {
+      "0s": 1.8853,
+      "60s": 1.8917,
+      "120s": 1.8954,
+      "240s": 1.7334,
+      "480s": 1.4745,
+      "900s": 1.3401,
+      "no_hold": 1.305
+     },
+     "vs_baseline": {
+      "0s": {
+       "mean": -9.4677,
+       "half_width": 0.7465,
+       "verdict": "",
+       "days": 10
+      },
+      "60s": {
+       "mean": -8.6997,
+       "half_width": 0.7432,
+       "verdict": "",
+       "days": 10
+      },
+      "120s": {
+       "mean": -7.8984,
+       "half_width": 0.6982,
+       "verdict": "",
+       "days": 10
+      },
+      "240s": {
+       "mean": -5.9009,
+       "half_width": 0.5598,
+       "verdict": "",
+       "days": 10
+      },
+      "480s": {
+       "mean": -2.5755,
+       "half_width": 0.3363,
+       "verdict": "",
+       "days": 10
+      },
+      "900s": {
+       "mean": -0.1133,
+       "half_width": 0.125,
+       "verdict": "",
+       "days": 10
+      }
+     }
+    },
+    "undersupplied_pct": {
+     "mean": {
+      "0s": 18.6897,
+      "60s": 18.0,
+      "120s": 17.5172,
+      "240s": 16.3448,
+      "480s": 15.0345,
+      "900s": 14.6207,
+      "no_hold": 15.0345
+     },
+     "half_width": {
+      "0s": 2.4552,
+      "60s": 2.563,
+      "120s": 3.0252,
+      "240s": 2.8106,
+      "480s": 3.0036,
+      "900s": 3.0126,
+      "no_hold": 2.8178
+     },
+     "vs_baseline": {
+      "0s": {
+       "mean": 3.6552,
+       "half_width": 1.067,
+       "verdict": "worse",
+       "days": 10
+      },
+      "60s": {
+       "mean": 2.9655,
+       "half_width": 1.067,
+       "verdict": "worse",
+       "days": 10
+      },
+      "120s": {
+       "mean": 2.4828,
+       "half_width": 0.9922,
+       "verdict": "worse",
+       "days": 10
+      },
+      "240s": {
+       "mean": 1.3103,
+       "half_width": 0.787,
+       "verdict": "worse",
+       "days": 10
+      },
+      "480s": {
+       "mean": 0.0,
+       "half_width": 0.8702,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "900s": {
+       "mean": -0.4138,
+       "half_width": 1.0708,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "eta_error_min": {
+     "mean": {
+      "0s": 0.4348,
+      "60s": 0.4314,
+      "120s": 0.4364,
+      "240s": 0.4391,
+      "480s": 0.4226,
+      "900s": 0.4181,
+      "no_hold": 0.4174
+     },
+     "half_width": {
+      "0s": 0.0144,
+      "60s": 0.0162,
+      "120s": 0.0169,
+      "240s": 0.0177,
+      "480s": 0.0159,
+      "900s": 0.0151,
+      "no_hold": 0.0135
+     },
+     "vs_baseline": {
+      "0s": {
+       "mean": 0.0174,
+       "half_width": 0.0082,
+       "verdict": "worse",
+       "days": 10
+      },
+      "60s": {
+       "mean": 0.014,
+       "half_width": 0.0074,
+       "verdict": "worse",
+       "days": 10
+      },
+      "120s": {
+       "mean": 0.019,
+       "half_width": 0.0073,
+       "verdict": "worse",
+       "days": 10
+      },
+      "240s": {
+       "mean": 0.0217,
+       "half_width": 0.0099,
+       "verdict": "worse",
+       "days": 10
+      },
+      "480s": {
+       "mean": 0.0052,
+       "half_width": 0.0114,
+       "verdict": "no clear difference",
+       "days": 10
+      },
+      "900s": {
+       "mean": 0.0007,
+       "half_width": 0.0105,
+       "verdict": "no clear difference",
+       "days": 10
+      }
+     }
+    },
+    "prep_error_min": {
+     "mean": {
+      "0s": 4.0925,
+      "60s": 4.0913,
+      "120s": 4.0927,
+      "240s": 4.0917,
+      "480s": 4.0927,
+      "900s": 4.0931,
+      "no_hold": 4.0928
+     },
+     "half_width": {
+      "0s": 0.0772,
+      "60s": 0.0766,
+      "120s": 0.0772,
+      "240s": 0.077,
+      "480s": 0.0769,
+      "900s": 0.0775,
+      "no_hold": 0.0772
+     },
+     "vs_baseline": {
+      "0s": {
+       "mean": -0.0003,
+       "half_width": 0.0015,
+       "verdict": "",
+       "days": 10
+      },
+      "60s": {
+       "mean": -0.0016,
+       "half_width": 0.0019,
+       "verdict": "",
+       "days": 10
+      },
+      "120s": {
+       "mean": -0.0001,
+       "half_width": 0.0014,
+       "verdict": "",
+       "days": 10
+      },
+      "240s": {
+       "mean": -0.0011,
+       "half_width": 0.0022,
+       "verdict": "",
+       "days": 10
+      },
+      "480s": {
+       "mean": -0.0001,
+       "half_width": 0.0017,
+       "verdict": "",
+       "days": 10
+      },
+      "900s": {
+       "mean": 0.0003,
+       "half_width": 0.0009,
+       "verdict": "",
+       "days": 10
+      }
+     }
+    }
+   }
+  }
+ ]
+}
