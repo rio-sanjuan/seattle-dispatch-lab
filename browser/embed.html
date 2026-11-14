@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dispatch Lab inside an article</title>
+<style>
+  :root { --bg: #f4f6f1; --fg: #1b241f; }
+  :root[data-theme="dark"] { --bg: #101a16; --fg: #e3e8df; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.6 Georgia, serif; }
+  main { max-width: 46rem; margin: 0 auto; padding: 2rem 1rem 6rem; }
+  .bar { display: flex; gap: .5rem; margin-bottom: 1rem; font: 13px system-ui, sans-serif; }
+</style>
+</head>
+<body>
+<main>
+  <div class="bar">
+    <button id="theme" type="button">Switch theme</button>
+    <button id="remove" type="button">Remove the widget</button>
+  </div>
+  <h1>How the widget sits in an article</h1>
+  <p>This page stands in for a blog post: a narrow column, a theme switch, and text above and
+  below. The widget waits for the Start button, and an ordinary scroll moves the page, not the map.</p>
+  <div id="lab"></div>
+  <p>Text after the widget. Scroll past it and the simulation's clock stops until it is back in view.</p>
+  <p style="height: 120vh">More text, to make the page scroll.</p>
+</main>
+<script type="module" src="/src/demo.ts"></script>
+</body>
+</html>

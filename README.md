@@ -75,6 +75,15 @@ cannot keep up, and with twice as many the food still arrives about 23 minutes
 later. [docs/transit.md](docs/transit.md) has the data sources and terms, how
 trips are planned, the results and what the model leaves out.
 
+## In the browser, with no server
+
+[`browser/`](browser) is the simulator ported to TypeScript. It runs a full
+day in a Web Worker in the visitor's browser and draws its own map, so it can
+sit on a static website. Its tests replay days built by the Python simulator
+and require identical results, delivery by delivery.
+[browser/README.md](browser/README.md) covers running it, how it is checked,
+and how to put it on a page.
+
 ## How the simulation works
 
 - **Events, not frames.** Everything that will happen at a known time (an order
@@ -120,8 +129,11 @@ src/seattle_dispatch_lab/
   experiments.py  many-day runs, paired differences, confidence intervals
   server.py     streams the running simulation to the browser
   web/          the live map (plain HTML and JavaScript, no build step)
-  cli.py        setup / run / compare / sweep / information / fleet / serve
+  browser_export.py  street data and reference runs for the browser version
+  cli.py        setup / run / compare / sweep / information / fleet / export-browser / serve
+browser/        the same simulator in TypeScript, for static websites (see its README)
 scripts/
+  export_browser_fixtures.py  reference runs the browser version's tests replay
   build_traffic_profile.py   turns the 274 MB sensor dataset into data/traffic_profile.json
   collect_wsdot.py           records live WSDOT travel times (not used by the simulator yet)
   export_results.py          runs the evaluation experiments, writes results/

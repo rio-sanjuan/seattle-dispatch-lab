@@ -1,0 +1,6 @@
+node_modules/
+dist/
+# Derived from OpenStreetMap data; written by `dispatch-lab export-browser`
+# and `scripts/export_browser_fixtures.py`.
+public/data/
+test/fixtures/real/
