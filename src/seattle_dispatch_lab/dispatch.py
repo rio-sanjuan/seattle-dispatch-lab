@@ -33,8 +33,8 @@ class DispatchView:
     now: float
     driver_ids: np.ndarray  # (D,)
     order_ids: np.ndarray  # (O,)
-    pickup_drive: np.ndarray  # (O, D) est. drive from each driver to the restaurant
-    dropoff_drive: np.ndarray  # (O,) est. drive restaurant -> customer
+    pickup_drive: np.ndarray  # (O, D) est. trip from each driver to the restaurant
+    dropoff_drive: np.ndarray  # (O, D) est. trip restaurant -> customer, by this driver
     placed: np.ndarray  # (O,) when the customer ordered
     est_ready: np.ndarray  # (O,) when we expect the food to be ready
     promised: np.ndarray  # (O,) the delivery time quoted to the customer
@@ -92,7 +92,7 @@ class BatchedMatching:
     def costs(self, v: DispatchView) -> tuple[np.ndarray, np.ndarray]:
         at_counter = v.now + OFFER_REPLY_S + v.pickup_drive + PICKUP_OVERHEAD_S
         pickup = np.maximum(at_counter, v.est_ready[:, None])
-        deliver = pickup + v.dropoff_drive[:, None] + DROPOFF_OVERHEAD_S
+        deliver = pickup + v.dropoff_drive + DROPOFF_OVERHEAD_S
         cost = (
             (deliver - v.now)
             + self.w_late * np.maximum(0.0, deliver - v.promised[:, None])

@@ -167,11 +167,22 @@ def build(path: Path = NETWORK_PATH) -> Path:
 
 @dataclass
 class Route:
-    """A driven path: a polyline with the clock time at which each point is reached."""
+    """A travelled path: a polyline with the clock time at which each point is reached."""
 
     lonlat: np.ndarray  # (P, 2)
     t: np.ndarray  # (P,) absolute sim seconds, non-decreasing
     meters: float
+    # Transit trips only: (start time, what the courier is doing), in order.
+    legs: list[tuple[float, str]] | None = None
+
+    def leg_at(self, now: float) -> str | None:
+        if not self.legs:
+            return None
+        current = self.legs[0][1]
+        for start, label in self.legs:
+            if start <= now:
+                current = label
+        return current
 
     @property
     def start(self) -> float:

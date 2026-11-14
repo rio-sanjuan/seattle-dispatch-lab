@@ -113,6 +113,8 @@ details summary { cursor: pointer; font-size: 12px; font-weight: 600; color: var
 .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
 .ring { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--ink); flex: none; }
 .ring.late { border-color: var(--critical); background: var(--critical); box-shadow: inset 0 0 0 2px var(--surface); }
+.dot.outlined { background: var(--idle); box-shadow: 0 0 0 2px var(--ink); width: 8px; height: 8px; margin: 0 1px; }
+.thin-line { width: 26px; height: 0; border-top: 1px solid var(--ink-2); opacity: .6; flex: none; }
 .tiny { width: 5px; height: 5px; margin: 0 2.5px; border-radius: 50%; background: var(--muted); flex: none; }
 .ramp { width: 26px; height: 4px; border-radius: 2px; flex: none; }
 #banner {
@@ -143,6 +145,8 @@ details summary { cursor: pointer; font-size: 12px; font-weight: 600; color: var
     <div class="item"><span class="ring late"></span>Customer, order running late</div>
     <div class="item"><span class="tiny"></span>Restaurant</div>
     <div class="item"><span class="ramp" id="ramp"></span><span id="ramp-label">Freeway slowdown</span></div>
+    <div class="item transit-only" hidden><span class="dot outlined"></span>Contrasting outline: courier on public transit</div>
+    <div class="item transit-only" hidden><span class="thin-line"></span>Bus and rail routes</div>
   </div>
 </div>
 
@@ -206,12 +210,16 @@ details summary { cursor: pointer; font-size: 12px; font-weight: 600; color: var
       <div><label for="f-start">Start hour (0–23)</label><input id="f-start" type="number" min="0" max="23" step="1"></div>
       <div><label for="f-traffic">Traffic (0 = none, 1 = measured)</label><input id="f-traffic" type="number" min="0" max="3" step="0.25"></div>
       <div><label for="f-seed">Random seed</label><input id="f-seed" type="number"></div>
+      <div><label for="f-mode">Couriers travel by</label><select id="f-mode">
+        <option value="car">Car</option><option value="mixed">Half car, half transit</option><option value="transit">Public transit</option>
+      </select></div>
+      <div><label for="f-radius">Delivery radius (km)</label><input id="f-radius" type="number" min="0.3" max="8" step="0.5"></div>
       <button id="restart" class="wide">Restart the day</button>
     </div>
   </details>
 
   <div class="credits">
-    Drivers, customers, orders and restaurant names are simulated. Streets © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, tiles by <a href="https://openfreemap.org">OpenFreeMap</a>. Freeway speeds: UW STAR Lab / WSDOT loop-detector dataset (CC-BY-4.0).
+    Drivers, customers, orders and restaurant names are simulated. Transit scheduling, geographic, and real-time data provided by permission of King County; regional schedules provided "as is" by Sound Transit. Streets © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, tiles by <a href="https://openfreemap.org">OpenFreeMap</a>. Freeway speeds: UW STAR Lab / WSDOT loop-detector dataset (CC-BY-4.0).
   </div>
 </aside>
 <div id="tip"></div>

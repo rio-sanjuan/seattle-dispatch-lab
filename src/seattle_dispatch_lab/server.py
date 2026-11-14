@@ -79,6 +79,7 @@ class LiveSim:
             "traffic_classes": TRAFFIC_CLASSES,
             "traffic_source": sim.traffic.source,
             "freeways": self._freeways,
+            "transit_lines": sim.transit.lines() if sim.transit is not None else [],
             "restaurants": [
                 [r.id, round(r.lon, 5), round(r.lat, 5), r.name, round(r.mean_prep_s / 60)]
                 for r in sim.restaurants
@@ -124,7 +125,8 @@ class LiveSim:
         sim = self.sim
         d = sim.drivers[did]
         out = {
-            "id": did, "status": d.status,
+            "id": did, "status": d.status, "mode": d.mode,
+            "leg": d.route.leg_at(sim.now) if d.route is not None else None,
             "deliveries": d.deliveries, "declines": d.declines,
             "km": round(d.meters / 1000, 1),
             "shift_end": d.shift_end, "order": None,
@@ -144,10 +146,15 @@ class LiveSim:
         allowed = {
             "seed": int, "start_day": str, "start_hour": float, "hours": float,
             "n_drivers": int, "peak_orders_per_hour": float, "traffic_scale": float,
-            "dispatcher": str,
+            "dispatcher": str, "courier_mode": str, "delivery_radius_m": float,
         }  # fmt: skip
-        clean = {k: allowed[k](v) for k, v in changes.items() if k in allowed}
-        cfg = replace(self.sim.cfg, **clean)
+        try:
+            clean = {k: allowed[k](v) for k, v in changes.items() if k in allowed}
+            cfg = replace(self.sim.cfg, **clean)
+        except (TypeError, ValueError):
+            log.warning("ignored a restart with invalid settings: %r", changes)
+            return
+        cfg.delivery_radius_m = float(np.clip(cfg.delivery_radius_m, 300, 8000))
         cfg.n_drivers = int(np.clip(cfg.n_drivers, 1, 2000))
         cfg.peak_orders_per_hour = float(np.clip(cfg.peak_orders_per_hour, 1, 5000))
         cfg.start_hour = float(np.clip(cfg.start_hour, 0, 23.5))
@@ -157,6 +164,8 @@ class LiveSim:
             self.sim = await asyncio.to_thread(Simulation, cfg, self.net)
             self.generation += 1
             self._kpi_at = -1.0
+        except FileNotFoundError as exc:  # transit asked for, but no timetable downloaded
+            log.warning("restart skipped: %s", exc)
         finally:
             self.busy = False
 

@@ -17,7 +17,11 @@ Needs [uv](https://docs.astral.sh/uv/) and Python 3.12+.
 ```bash
 uv run dispatch-lab setup      # once: downloads Seattle's streets from OpenStreetMap (~4 min)
 uv run dispatch-lab serve      # then open http://127.0.0.1:8765
-uv run dispatch-lab compare    # run all three dispatchers on the same day, print a table
+uv run dispatch-lab compare    # all three dispatchers on the same 10 days, with confidence intervals
+uv run dispatch-lab sweep      # trade delivery speed against driver time
+uv run dispatch-lab information   # what would perfect estimates be worth?
+uv run dispatch-lab setup-transit # optional: downloads bus and rail schedules (~36 MB)
+uv run dispatch-lab fleet      # couriers by car vs. public transit vs. half and half
 uv run pytest                  # tests use a small made-up grid; no download needed
 ```
 
@@ -36,30 +40,40 @@ short enough to read in one sitting.
 | `matching` | Every 30 seconds, looks at all open orders and free drivers together and picks the set of pairs with the lowest total cost. |
 | `matching_jit` | Same, but holds an order back until a driver sent now would arrive about when the food is ready. |
 
-One simulated Friday, 10:00 to 22:00, same orders and drivers for each
-(`uv run dispatch-lab compare`, seed 7):
+Ten simulated Fridays, 10:00 to 22:00, the same ten days for each dispatcher
+(`uv run dispatch-lab compare --seed 1 --days 10`):
 
 | | nearest | matching | matching_jit |
 |---|---:|---:|---:|
-| Average delivery time (min) | 28.8 | 25.4 | 26.2 |
-| Late vs. promised time (%) | 22.5 | 5.9 | 6.7 |
-| Drive to restaurant (min) | 9.4 | 7.0 | 7.4 |
-| Driver waits at restaurant (min) | 5.2 | 6.5 | 3.8 |
-| Driver time spent on deliveries (%) | 67.8 | 64.2 | 59.0 |
-
-With 30% more orders (`--peak-orders-per-hour 520`) the greedy dispatcher falls
-apart: 50% of orders late and a 44-minute average, against 12% and 28 minutes
-for matching.
+| Average delivery time (min) | 30.7 | 26.3 | 26.9 |
+| Not delivered by the promised time (%) | 27.6 | 6.8 | 7.3 |
+| Driver time used per delivery (min) | 25.8 | 24.5 | 22.2 |
+| Driver waits at restaurant (min) | 5.5 | 7.1 | 4.1 |
 
 Two things worth noticing:
 
 - **Matching beats greedy by looking at everyone at once.** Greedy hands the
   closest driver to whichever order asked first, even when a later order needed
-  that driver far more.
-- **Just-in-time is a trade, not a free win.** It cuts the time drivers stand
-  around at restaurants and frees up driver time, but deliveries get slightly
-  slower, because a late decision leaves less room for a declined offer or a
-  wrong estimate.
+  that driver far more. Day for day, greedy is 4.4 ± 1.8 minutes slower.
+- **Just-in-time is a trade, not a free win.** It saves 2.3 ± 0.3 driver-minutes
+  per delivery, and deliveries get 0.7 ± 0.1 minutes slower, because a late
+  decision leaves less room for a declined offer or a wrong estimate.
+
+## Evaluation
+
+[docs/metrics.md](docs/metrics.md) defines every metric, what it rewards and
+what it misses, and how policies are compared: the same simulated days for each
+policy, per-day paired differences, and 95% intervals. The numbers behind it
+are in [results/](results), written by `scripts/export_results.py`.
+
+## Couriers on public transit
+
+An optional experiment: what if couriers rode the bus? With Seattle's real
+bus, rail and ferry timetable, a delivery by transit uses about twice the
+courier time of one by car (46 minutes against 22). The same number of couriers
+cannot keep up, and with twice as many the food still arrives about 23 minutes
+later. [docs/transit.md](docs/transit.md) has the data sources and terms, how
+trips are planned, the results and what the model leaves out.
 
 ## How the simulation works
 
@@ -85,6 +99,7 @@ Two things worth noticing:
 | Traffic on city streets | Assumed: a damped copy of the freeway pattern. No public sensor data covers them. |
 | Speeds on an empty city street | Assumed: 62% of the limit on main streets, 50% on side streets, to account for signals and turns. |
 | Restaurant locations | Real food-venue locations from OpenStreetMap. Names, menus, prep times and popularity are made up. |
+| Bus, rail and ferry schedules (optional) | Real. Published timetables for one Friday. Vehicles are assumed to run exactly on time. |
 | Customers | Made up. Placed on residential streets within 4.5 km of the restaurant. |
 | Orders, drivers, shifts, declines | Made up. Lunch and dinner peaks, a few busy restaurants, drivers who decline far pickups. |
 
@@ -100,12 +115,16 @@ src/seattle_dispatch_lab/
   traffic.py    slowdown by road type and time of week
   sim.py        the simulated world and its event loop
   dispatch.py   the three dispatchers
+  transit.py    bus and rail timetable, and a trip planner for couriers without a car
+  metrics.py    every evaluation metric, defined once
+  experiments.py  many-day runs, paired differences, confidence intervals
   server.py     streams the running simulation to the browser
   web/          the live map (plain HTML and JavaScript, no build step)
-  cli.py        setup / run / compare / serve
+  cli.py        setup / run / compare / sweep / information / fleet / serve
 scripts/
   build_traffic_profile.py   turns the 274 MB sensor dataset into data/traffic_profile.json
   collect_wsdot.py           records live WSDOT travel times (not used by the simulator yet)
+  export_results.py          runs the evaluation experiments, writes results/
 ```
 
 ## Ideas to try next
@@ -127,6 +146,11 @@ scripts/
   [zenodo.org/records/3258904](https://zenodo.org/records/3258904), CC-BY-4.0.
   `data/traffic_profile.json` is derived from it.
 - Map tiles in the live view: [OpenFreeMap](https://openfreemap.org).
+- Transit schedules (only if you run `setup-transit`; not stored in this
+  repository): Sound Transit's Open Transit Data feed, which combines King
+  County Metro, Sound Transit and the other Puget Sound agencies. Transit
+  scheduling, geographic, and real-time data provided by permission of King
+  County. See [docs/transit.md](docs/transit.md) for the terms.
 
 ## License
 

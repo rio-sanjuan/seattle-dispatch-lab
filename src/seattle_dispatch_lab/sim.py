@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from .dispatch import DISPATCHERS, DROPOFF_OVERHEAD_S, DispatchView
+from .dispatch import DISPATCHERS, DROPOFF_OVERHEAD_S, OFFER_REPLY_S, DispatchView
 from .names import restaurant_names
 from .network import CLASS_ID, RoadNetwork, Route
 from .traffic import DAYS, Traffic
@@ -33,6 +33,9 @@ OPEN, O_OFFERED, ASSIGNED, COLLECTING, EN_ROUTE, DELIVERED = range(6)
 ORDER_STATES = ["open", "offered", "assigned", "collecting", "en_route", "delivered"]
 
 
+COURIER_MODES = ["car", "transit", "mixed"]
+
+
 @dataclass
 class SimConfig:
     seed: int = 7
@@ -46,6 +49,15 @@ class SimConfig:
     promise_slack_min: float = 10.0
     traffic_scale: float = 1.0
     dispatcher: str = "matching_jit"
+    jit_buffer_s: float = 240.0  # how early matching_jit is willing to send a driver
+    # "What if the estimates were perfect?" switches. They hand the dispatcher
+    # the true food-ready time and/or the true drive times under traffic.
+    know_prep: bool = False
+    know_drive: bool = False
+    # Who delivers: "car", "transit" (walk + bus + rail, on the real timetable),
+    # or "mixed" (transit_share of couriers use transit, the rest drive).
+    courier_mode: str = "car"
+    transit_share: float = 0.5
 
     def __post_init__(self):
         self.hours = float(min(max(self.hours, 0.5), 24.0))
@@ -53,6 +65,8 @@ class SimConfig:
             raise ValueError(f"start_day must be one of {DAYS}")
         if self.dispatcher not in DISPATCHERS:
             raise ValueError(f"dispatcher must be one of {sorted(DISPATCHERS)}")
+        if self.courier_mode not in COURIER_MODES:
+            raise ValueError(f"courier_mode must be one of {COURIER_MODES}")
 
 
 @dataclass
@@ -79,6 +93,7 @@ class Order:
     dropoff_ff_s: float  # free-flow drive restaurant -> customer
     pickup_overhead_s: float
     dropoff_overhead_s: float
+    dropoff_transit_s: float = np.nan  # by transit, leaving when the food should be ready
     status: int = OPEN
     driver: int = -1
     declined: set[int] = field(default_factory=set)
@@ -100,6 +115,7 @@ class Driver:
     shift_start: float
     shift_end: float
     accept_base: float
+    mode: str = "car"
     status: int = OFFLINE
     order: int = -1
     route: Route | None = None
@@ -121,13 +137,18 @@ def demand_shape(hour: float) -> float:
 
 
 class Simulation:
-    def __init__(self, cfg: SimConfig, net: RoadNetwork | None = None):
+    def __init__(self, cfg: SimConfig, net: RoadNetwork | None = None, transit=None):
         self.cfg = cfg
         self.net = net or RoadNetwork.load()
+        self.transit = transit
+        if cfg.courier_mode != "car" and transit is None:
+            from .transit import TransitNetwork
+
+            self.transit = TransitNetwork.load(self.net, cfg.start_day)
         self.end_time = cfg.hours * 3600.0
         week_offset = DAYS.index(cfg.start_day) * 86400 + cfg.start_hour * 3600
         self.traffic = Traffic(week_offset, scale=cfg.traffic_scale)
-        self.dispatcher = DISPATCHERS[cfg.dispatcher]()
+        self.dispatcher = self._make_dispatcher(cfg.dispatcher)
         self.now = 0.0
 
         # Two random streams: the world (identical across dispatchers for a
@@ -139,6 +160,7 @@ class Simulation:
         self._seq = 0
         self._graph_slot = -1
         self._graph = None
+        self._true_rows: dict[int, tuple[np.ndarray, np.ndarray]] = {}
 
         self.feed: deque[dict] = deque(maxlen=500)
         self.feed_seq = 0
@@ -190,6 +212,10 @@ class Simulation:
     def est_factor(self, t: float) -> float:
         return float(self.traffic.multipliers(t)[CLASS_ID["arterial"]])
 
+    def clock(self, t: float) -> float:
+        """Sim time -> seconds after midnight, the clock the transit timetable uses."""
+        return self.cfg.start_hour * 3600.0 + t
+
     def _build_orders(self) -> None:
         cfg, net, rng = self.cfg, self.net, self._world
         peak_per_s = cfg.peak_orders_per_hour / 3600.0
@@ -218,17 +244,20 @@ class Simulation:
             prep = float(rng.lognormal(np.log(rest.mean_prep_s) - 0.06, 0.35))
             drive_ff = float(self.ff_from_rest[r, c])
             est_ready = t + rest.mean_prep_s
-            promised = (
-                est_ready
-                + drive_ff * self.est_factor(t)
-                + DROPOFF_OVERHEAD_S
-                + cfg.promise_slack_min * 60
-            )
+            travel = drive_ff * self.est_factor(t)
+            by_transit = float("nan")
+            if self.transit is not None:
+                by_transit = float(
+                    self.transit.times_from(rest.node, self.clock(est_ready), [c])[0]
+                )
+                if cfg.courier_mode == "transit":
+                    travel = by_transit  # an all-transit fleet quotes transit times
+            promised = est_ready + travel + DROPOFF_OVERHEAD_S + cfg.promise_slack_min * 60
             order = Order(
                 id=oid, restaurant=r, customer_node=c,
                 lon=float(net.node_lon[c]), lat=float(net.node_lat[c]),
                 placed=t, ready=t + prep, est_ready=est_ready, promised=promised,
-                dropoff_ff_s=drive_ff,
+                dropoff_ff_s=drive_ff, dropoff_transit_s=by_transit,
                 pickup_overhead_s=float(rng.uniform(60, 180)),
                 dropoff_overhead_s=float(rng.uniform(60, 150)),
             )  # fmt: skip
@@ -238,6 +267,7 @@ class Simulation:
 
     def _build_drivers(self) -> None:
         cfg, net, rng = self.cfg, self.net, self._world
+        fleet = np.random.default_rng(cfg.seed + 20_000)  # separate stream: the world stays put
         self.drivers: list[Driver] = []
         for i in range(cfg.n_drivers):
             kind = rng.choice(3, p=[0.30, 0.45, 0.25])  # lunch, dinner, all day
@@ -255,6 +285,9 @@ class Simulation:
             near = near[np.isfinite(self.ff_to_rest[0, near])]
             node = int(rng.choice(near)) if len(near) else anchor
             d = Driver(i, node, s, e, accept_base=float(rng.uniform(0.82, 0.98)))
+            on_transit = fleet.random() < cfg.transit_share
+            if cfg.courier_mode == "transit" or (cfg.courier_mode == "mixed" and on_transit):
+                d.mode = "transit"
             self.drivers.append(d)
             if e > 0:
                 self._push(max(s, 0.0), "shift_start", i)
@@ -282,8 +315,14 @@ class Simulation:
         self.run_until(self.end_time)
         return self
 
+    def _make_dispatcher(self, name: str):
+        dispatcher = DISPATCHERS[name]()
+        if hasattr(dispatcher, "buffer"):
+            dispatcher.buffer = self.cfg.jit_buffer_s
+        return dispatcher
+
     def set_dispatcher(self, name: str) -> None:
-        self.dispatcher = DISPATCHERS[name]()
+        self.dispatcher = self._make_dispatcher(name)
         self.cfg.dispatcher = name
         self._log("system", f"Dispatcher switched to: {self.dispatcher.label}")
 
@@ -294,7 +333,29 @@ class Simulation:
         if slot != self._graph_slot:
             self._graph = self.net.graph(self.traffic.edge_seconds(self.net, self.now))
             self._graph_slot = slot
+            self._true_rows.clear()
         return self._graph
+
+    def _true_drive(self, restaurant: int) -> tuple[np.ndarray, np.ndarray]:
+        """True drive seconds (every node -> restaurant, restaurant -> every node) right now."""
+        graph = self._road_graph()
+        if restaurant not in self._true_rows:
+            node = self.rest_nodes[restaurant : restaurant + 1]
+            self._true_rows[restaurant] = (
+                self.net.times_to(graph, node)[0],
+                self.net.times_from(graph, node)[0],
+            )
+        return self._true_rows[restaurant]
+
+    def _travel(self, d: Driver, src: int, dst: int) -> Route:
+        """The trip this courier actually makes, starting now."""
+        if d.mode == "transit":
+            # The timetable runs on clock time; shift the trip so it starts exactly now.
+            t0 = self.clock(self.now)
+            trip = self.transit.journey(src, dst, t0)
+            legs = [(self.now + (t - t0), label) for t, label in trip.legs or []]
+            return Route(trip.lonlat, self.now + (trip.t - t0), trip.meters, legs)
+        return self.net.route(self._road_graph(), src, dst, self.now)
 
     def _set_status(self, d: Driver, status: int) -> None:
         d.seconds[d.status] += self.now - d.since
@@ -354,6 +415,25 @@ class Simulation:
         rest = np.array([o.restaurant for o in orders])
         nodes = np.array([d.node for d in drivers])
         pickup = self.ff_to_rest[np.ix_(rest, nodes)].astype(np.float64) * factor
+        dropoff = np.array([o.dropoff_ff_s for o in orders]) * factor
+        if self.cfg.know_drive:
+            for i, o in enumerate(orders):
+                to_rest, from_rest = self._true_drive(o.restaurant)
+                pickup[i] = to_rest[nodes]
+                dropoff[i] = from_rest[o.customer_node]
+        dropoff = np.repeat(dropoff[:, None], len(drivers), axis=1)
+        riders = [j for j, d in enumerate(drivers) if d.mode == "transit"]
+        if riders:
+            # Transit couriers: read the timetable. One scan per courier gives
+            # the door-to-door time to every restaurant with an open order.
+            leave = self.clock(self.now) + OFFER_REPLY_S
+            targets = sorted({self.restaurants[o.restaurant].node for o in orders})
+            where = {n: k for k, n in enumerate(targets)}
+            rows = np.array([where[self.restaurants[o.restaurant].node] for o in orders])
+            for j in riders:
+                pickup[:, j] = self.transit.times_from(drivers[j].node, leave, targets)[rows]
+            dropoff[:, riders] = np.array([o.dropoff_transit_s for o in orders])[:, None]
+        ready = [o.ready if self.cfg.know_prep else o.est_ready for o in orders]
         declined = np.zeros(pickup.shape, dtype=bool)
         col = {d.id: j for j, d in enumerate(drivers)}
         for i, o in enumerate(orders):
@@ -365,9 +445,9 @@ class Simulation:
             driver_ids=np.array([d.id for d in drivers]),
             order_ids=np.array([o.id for o in orders]),
             pickup_drive=pickup,
-            dropoff_drive=np.array([o.dropoff_ff_s for o in orders]) * factor,
+            dropoff_drive=dropoff,
             placed=np.array([o.placed for o in orders]),
-            est_ready=np.array([o.est_ready for o in orders]),
+            est_ready=np.array(ready),
             promised=np.array([o.promised for o in orders]),
             declined=declined,
         )
@@ -388,8 +468,10 @@ class Simulation:
         did, oid, est = arg
         d, o = self.drivers[did], self.active[oid]
         rest = self.restaurants[o.restaurant]
-        # Drivers turn down long pickups more often.
-        p = np.clip(d.accept_base - 0.025 * max(0.0, est / 60 - 6), 0.25, 1.0)
+        # Couriers turn down long pickups more often. Transit couriers expect
+        # longer trips, so their patience is doubled.
+        patience = 2.0 if d.mode == "transit" else 1.0
+        p = np.clip(d.accept_base - 0.025 / patience * max(0.0, est / 60 - 6 * patience), 0.25, 1.0)
         if self._behave.random() > p:
             o.status = OPEN
             o.declined.add(did)
@@ -402,7 +484,7 @@ class Simulation:
             return
         o.status, o.driver, o.assigned = ASSIGNED, did, self.now
         o.est_pickup_drive = est
-        route = self.net.route(self._road_graph(), d.node, rest.node, self.now)
+        route = self._travel(d, d.node, rest.node)
         o.true_pickup_drive = route.end - route.start
         d.meters += route.meters
         self._set_status(d, TO_RESTAURANT)
@@ -428,9 +510,14 @@ class Simulation:
         d = self.drivers[did]
         o = self.active[d.order]
         o.status, o.picked_up = EN_ROUTE, self.now
-        o.est_dropoff_drive = o.dropoff_ff_s * self.est_factor(self.now)
-        route = self.net.route(self._road_graph(), d.node, o.customer_node, self.now)
+        route = self._travel(d, d.node, o.customer_node)
         o.true_dropoff_drive = route.end - route.start
+        if d.mode == "transit":
+            o.est_dropoff_drive = o.dropoff_transit_s
+        elif self.cfg.know_drive:
+            o.est_dropoff_drive = o.true_dropoff_drive
+        else:
+            o.est_dropoff_drive = o.dropoff_ff_s * self.est_factor(self.now)
         d.meters += route.meters
         self._set_status(d, TO_CUSTOMER)
         self._set_route(d, route)
@@ -514,27 +601,10 @@ class Simulation:
         return out
 
     def summary(self) -> dict:
-        """End-of-run report, including driver-side numbers."""
-        out = self.kpis()
-        seconds = np.zeros(7)
-        for d in self.drivers:
-            s = np.array(d.seconds)
-            s[d.status] += self.now - d.since
-            seconds += s
-        online_h = seconds[IDLE:].sum() / 3600
-        busy_h = seconds[TO_RESTAURANT:].sum() / 3600
-        out.update(
-            dispatcher=self.dispatcher.name,
-            scheduled=self.n_scheduled,
-            undelivered=self.n_placed - len(self.done),
-            offers=self.n_offers,
-            declines=self.n_declines,
-            driver_hours=float(online_h),
-            utilization_pct=float(busy_h / online_h * 100) if online_h else 0.0,
-            deliveries_per_driver_hour=float(len(self.done) / online_h) if online_h else 0.0,
-            km_per_delivery=float(sum(d.meters for d in self.drivers) / 1000 / max(len(self.done), 1)),
-        )  # fmt: skip
-        return out
+        """End-of-run report. Every number is defined in metrics.py."""
+        from .metrics import summarize
+
+        return summarize(self)
 
     # ------------------------------------------------------- live UI snapshot
 
@@ -549,7 +619,8 @@ class Simulation:
             if d.status == OFFLINE:
                 continue
             lon, lat = self.driver_position(d)
-            drivers.append([d.id, round(lon, 5), round(lat, 5), d.status, d.order])
+            transit = int(d.mode == "transit")
+            drivers.append([d.id, round(lon, 5), round(lat, 5), d.status, d.order, transit])
         orders = [
             [o.id, o.status, o.restaurant, round(o.lon, 5), round(o.lat, 5),
              round(o.placed), round(o.promised), o.driver, round(o.est_ready)]
