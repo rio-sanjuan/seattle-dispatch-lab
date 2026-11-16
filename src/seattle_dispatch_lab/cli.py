@@ -164,6 +164,14 @@ def cmd_fleet(args: argparse.Namespace) -> None:
         print(f"  {label:{width - 2}}" + "".join(f"{_fmt(v, digits):>14}" for v in means))
 
 
+def cmd_export_browser(args: argparse.Namespace) -> None:
+    from pathlib import Path
+
+    from .browser_export import write_data
+
+    write_data(Path(args.out))
+
+
 def cmd_serve(args: argparse.Namespace) -> None:
     import uvicorn
 
@@ -210,6 +218,12 @@ def main() -> None:
     p = sub.add_parser("fleet", help="couriers by car vs. public transit vs. a mix")
     _add_world_args(p, days=True)
     p.set_defaults(func=cmd_fleet)
+
+    p = sub.add_parser(
+        "export-browser", help="write the street data the browser version in browser/ needs"
+    )
+    p.add_argument("--out", default="browser/public/data", help="folder to write into")
+    p.set_defaults(func=cmd_export_browser)
 
     p = sub.add_parser("serve", help="watch the dispatcher live in a browser")
     _add_world_args(p)

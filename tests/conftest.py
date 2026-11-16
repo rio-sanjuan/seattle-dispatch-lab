@@ -10,8 +10,7 @@ BLOCK_M = 400.0
 EDGE_S = 40.0  # every block takes 40 s at free flow
 
 
-@pytest.fixture(scope="session")
-def grid() -> RoadNetwork:
+def make_grid() -> RoadNetwork:
     lon0, lat0 = -122.35, 47.60
     dlon = BLOCK_M / (111_320.0 * np.cos(np.radians(lat0)))
     dlat = BLOCK_M / 110_540.0
@@ -46,3 +45,8 @@ def grid() -> RoadNetwork:
             "venue_lonlat": np.column_stack([node_lon, node_lat])[::3],
         }
     )
+
+
+@pytest.fixture(scope="session")
+def grid() -> RoadNetwork:
+    return make_grid()
