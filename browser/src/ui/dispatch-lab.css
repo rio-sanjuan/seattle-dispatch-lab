@@ -142,6 +142,22 @@
   background: var(--sdl-surface); border: 1px solid var(--sdl-border); border-radius: 6px;
   padding: 5px 9px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.14);
 }
+.sdl-sheet {
+  position: absolute; inset: 10px; z-index: 6; overflow: auto; overscroll-behavior: contain;
+  background: var(--sdl-surface); border: 1px solid var(--sdl-border); border-radius: 8px;
+  padding: 12px 14px 16px; box-shadow: 0 6px 24px rgba(0,0,0,.18);
+}
+.sdl-sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; }
+.sdl .sdl-sheet-head h3 { margin: 0; font-size: 14px; color: var(--sdl-ink); }
+.sdl .sdl-sheet-head button { min-height: 28px; padding: 2px 10px; font-size: 12px; font-weight: 400; }
+.sdl-sheet p { margin: 0 0 10px; color: var(--sdl-ink-2); max-width: 70ch; }
+.sdl table.sdl-results { font-size: 12.5px; }
+.sdl table.sdl-results th[scope="row"] { font-weight: 400; color: var(--sdl-ink); text-align: left; position: static; }
+.sdl table.sdl-results th.sdl-group { text-align: left; color: var(--sdl-ink-2); font-weight: 600; padding-top: 12px; position: static; }
+.sdl table.sdl-results td { white-space: nowrap; padding-left: 12px; }
+.sdl table.sdl-results td.sdl-best { font-weight: 700; background: var(--sdl-wash); }
+.sdl-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.sdl-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .sdl-start {
   position: absolute; inset: 0; z-index: 5; display: grid; place-content: center; justify-items: center; gap: 10px;
   padding: 20px; text-align: center; background: var(--sdl-map);

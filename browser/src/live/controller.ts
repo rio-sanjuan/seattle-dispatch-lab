@@ -6,6 +6,7 @@ import { DISPATCHERS, DISPATCHER_LIST } from '../sim/dispatch';
 import { TRAFFIC_CLASSES, type RoadNetwork } from '../sim/network';
 import { OFFLINE, Simulation, makeConfig, type SimConfig } from '../sim/sim';
 import { DAYS, type TrafficProfile } from '../sim/traffic';
+import type { Summary } from '../sim/metrics';
 import type { Command, Detail, Hello, Kpi, State } from './protocol';
 
 export const SPEEDS = [1, 10, 30, 60, 120, 300, 900];
@@ -49,6 +50,7 @@ export class LiveSim {
   private routeSeq = 0;
   private seriesN = 0;
   private kpiAt = -Infinity;
+  private reportAt = -Infinity;
   private kpi: { hour: Kpi; all: Kpi } = {
     hour: { delivered: 0, placed: 0 },
     all: { delivered: 0, placed: 0 },
@@ -57,9 +59,12 @@ export class LiveSim {
   constructor(
     private readonly net: RoadNetwork,
     private readonly profile: TrafficProfile,
+    /** Settings chosen by the page's author. */
     config: Partial<SimConfig> = {},
+    /** Settings from a visitor (a shared link): checked and clamped. */
+    changes: Record<string, unknown> = {},
   ) {
-    this.sim = new Simulation(makeConfig(config), net, profile);
+    this.sim = new Simulation(applyChanges(makeConfig(config), changes), net, profile);
   }
 
   hello(): Hello {
@@ -123,6 +128,10 @@ export class LiveSim {
     if (this.selected !== null && this.selected < sim.drivers.length) {
       msg.detail = this.driverDetail(this.selected);
     }
+    if (wallMs - this.reportAt > 1000) {
+      msg.report = sim.summary();
+      this.reportAt = wallMs;
+    }
     this.feedSeq = sim.feedSeq;
     this.routeSeq = sim.routeSeq;
     this.seriesN = sim.series.length;
@@ -157,7 +166,16 @@ export class LiveSim {
     this.playing = true;
     this.selected = null;
     this.feedSeq = this.routeSeq = this.seriesN = 0;
-    this.kpiAt = -Infinity;
+    this.kpiAt = this.reportAt = -Infinity;
+  }
+
+  /**
+   * The whole of the current day, from the start, under one dispatcher. Same
+   * orders, kitchens, driver shifts and driver decisions as the day on screen.
+   * About half a second on the Seattle network.
+   */
+  compareUnder(dispatcher: string): Summary {
+    return this.sim.fresh(dispatcher).run().summary();
   }
 
   handle(msg: Command): void {
@@ -180,6 +198,8 @@ export class LiveSim {
       case 'visible':
         this.visible = Boolean(msg.on);
         break;
+      case 'compare':
+        break; // the worker runs these one at a time, to report progress between them
     }
   }
 }

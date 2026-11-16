@@ -160,6 +160,8 @@ export interface Behaviour {
 export interface SimOptions {
   world?: WorldData;
   behaviour?: Behaviour;
+  /** Travel-time tables from an earlier simulation of the same world, to skip rebuilding them. */
+  ffToRest?: Float32Array[];
 }
 
 type EventKind =
@@ -215,6 +217,9 @@ export class Simulation {
   private graphSlot = -1;
   private readonly graph: Float64Array;
   private readonly behave: Behaviour;
+  /** The world as it stood before anything happened, so the same day can be run again. */
+  private readonly world: WorldData = { restaurants: [], orders: [], drivers: [] };
+  private readonly profile: TrafficProfile;
 
   constructor(
     cfg: SimConfig,
@@ -223,6 +228,7 @@ export class Simulation {
     options: SimOptions = {},
   ) {
     this.cfg = { ...cfg };
+    this.profile = profile;
     this.endTime = cfg.hours * 3600.0;
     const weekOffset = DAYS.indexOf(cfg.startDay) * 86400 + cfg.startHour * 3600;
     this.traffic = new Traffic(weekOffset, profile, cfg.trafficScale);
@@ -233,7 +239,7 @@ export class Simulation {
     // seed, so comparisons are like-for-like) and driver behaviour.
     this.behave = options.behaviour ?? new Rng(cfg.seed + 10_000);
     if (options.world) {
-      this.loadWorld(options.world);
+      this.loadWorld(options.world, options.ffToRest);
     } else {
       const world = new Rng(cfg.seed);
       this.buildRestaurants(world);
@@ -251,6 +257,7 @@ export class Simulation {
     const lon = this.net.nodeLon[node];
     const lat = this.net.nodeLat[node];
     this.restaurants.push({ id, name, node, lon, lat, meanPrepS });
+    this.world.restaurants.push([node, name, meanPrepS]);
   }
 
   /**
@@ -277,6 +284,10 @@ export class Simulation {
     estReady: number, promised: number, dropoffFfS: number, pickupOverheadS: number,
     dropoffOverheadS: number,
   ): Order { // prettier-ignore
+    this.world.orders.push([
+      restaurant, customerNode, placed, ready, estReady, promised, dropoffFfS,
+      pickupOverheadS, dropoffOverheadS,
+    ]); // prettier-ignore
     return {
       id, restaurant, customerNode, placed, ready, estReady, promised, dropoffFfS,
       pickupOverheadS, dropoffOverheadS,
@@ -289,6 +300,7 @@ export class Simulation {
 
   private addDriver(node: number, shiftStart: number, shiftEnd: number, acceptBase: number): void {
     const id = this.drivers.length;
+    this.world.drivers.push([node, shiftStart, shiftEnd, acceptBase]);
     this.drivers.push({
       id, node, shiftStart, shiftEnd, acceptBase, status: OFFLINE, order: -1, route: null,
       leaving: false, since: 0, seconds: [0, 0, 0, 0, 0, 0, 0], deliveries: 0, declines: 0,
@@ -300,9 +312,10 @@ export class Simulation {
     }
   }
 
-  private loadWorld(world: WorldData): void {
+  private loadWorld(world: WorldData, ffToRest?: Float32Array[]): void {
     for (const [node, name, prep] of world.restaurants) this.addRestaurant(node, name, prep);
-    this.buildEstimator(false);
+    if (ffToRest) this.ffToRest = ffToRest;
+    else this.buildEstimator(false);
     world.orders.forEach((o, id) => {
       const order = this.newOrder(id, o[0], o[1], o[2], o[3], o[4], o[5], o[6], o[7], o[8]);
       this.push(order.placed, 'order', order);
@@ -475,6 +488,18 @@ export class Simulation {
   run(): this {
     this.runUntil(this.endTime);
     return this;
+  }
+
+  /**
+   * The same day from the start, under another dispatcher: the same orders,
+   * kitchens and driver shifts, and drivers who answer with the same random
+   * stream. Whatever differs afterwards is the dispatcher's doing.
+   */
+  fresh(dispatcher: string): Simulation {
+    return new Simulation({ ...this.cfg, dispatcher }, this.net, this.profile, {
+      world: this.world,
+      ffToRest: this.ffToRest,
+    });
   }
 
   private makeDispatcher(name: string): Dispatcher {

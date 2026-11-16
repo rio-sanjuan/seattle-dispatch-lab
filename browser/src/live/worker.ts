@@ -3,6 +3,8 @@
 
 import { RoadNetwork } from '../sim/network';
 import type { TrafficProfile } from '../sim/traffic';
+import { DISPATCHER_LIST } from '../sim/dispatch';
+import type { Summary } from '../sim/metrics';
 import { LiveSim } from './controller';
 import type { FromWorker, ToWorker } from './protocol';
 
@@ -23,6 +25,27 @@ function tick(): void {
   if (live.visible) scope.postMessage(live.state(now));
 }
 
+/** Run the day on screen under each dispatcher, reporting after each one. */
+function compare(sim: LiveSim): void {
+  const generation = sim.generation;
+  const summaries: Summary[] = [];
+  const report = (): void =>
+    scope.postMessage({
+      type: 'comparison', generation, dispatchers: DISPATCHER_LIST, done: summaries.length, summaries,
+    }); // prettier-ignore
+  const next = (): void => {
+    if (sim.generation !== generation) return; // the day was restarted meanwhile
+    guarded(() => {
+      summaries.push(sim.compareUnder(DISPATCHER_LIST[summaries.length].name));
+      report();
+      last = performance.now(); // the live day did not advance while this ran
+      if (summaries.length < DISPATCHER_LIST.length) setTimeout(next, 0);
+    });
+  };
+  report();
+  setTimeout(next, 0);
+}
+
 function guarded(work: () => void): void {
   try {
     work();
@@ -37,7 +60,7 @@ scope.onmessage = (event) => {
     scope.postMessage({ type: 'busy' });
     guarded(() => {
       const net = RoadNetwork.fromBinary(msg.network);
-      live = new LiveSim(net, msg.profile as TrafficProfile, msg.config);
+      live = new LiveSim(net, msg.profile as TrafficProfile, msg.config, msg.changes);
       scope.postMessage(live.hello());
       last = performance.now();
       setInterval(tick, TICK_MS);
@@ -52,6 +75,8 @@ scope.onmessage = (event) => {
         scope.postMessage(sim.hello());
         last = performance.now();
       }, 0);
+    } else if (msg.cmd === 'compare') {
+      compare(sim);
     } else {
       guarded(() => sim.handle(msg));
       if (msg.cmd === 'visible' && msg.on) last = performance.now();

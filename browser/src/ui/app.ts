@@ -1,12 +1,15 @@
 // The live view: puts the widget on the page, starts the worker, and draws
 // what the worker reports. A port of web/app.js that needs no server.
 
-import type { Detail, FromWorker, Hello, State, ToWorker } from '../live/protocol';
+import type { Comparison, Detail, FromWorker, Hello, State, ToWorker } from '../live/protocol';
+import { changesFromQuery, queryFromConfig, scenarioUrl } from '../live/share';
+import type { Summary } from '../sim/metrics';
 import { RoadNetwork } from '../sim/network';
 import type { FeedItem, SimConfig } from '../sim/sim';
 import { DAYS } from '../sim/traffic';
 import { Charts, fmt } from './charts';
 import { MapView, type Hit } from './map';
+import { resultsTable } from './results';
 import { TEMPLATE } from './template';
 
 export interface MountOptions {
@@ -21,6 +24,14 @@ export interface MountOptions {
   wheelZoom?: 'always' | 'modifier';
   /** Settings for the first day. */
   config?: Partial<SimConfig>;
+  /**
+   * For a page that is the simulator: read the scenario from the page's
+   * address (?seed=7&dispatcher=nearest...) and keep the address in step with
+   * what is running, so the address bar is always a link to it.
+   */
+  urlState?: boolean;
+  /** The page a copied scenario link should open. Defaults to the current page. */
+  shareUrl?: string;
   /** Make the worker yourself, if your bundler needs a different form. */
   createWorker?: () => Worker;
 }
@@ -65,12 +76,18 @@ export function mountDispatchLab(root: HTMLElement, options: MountOptions): Moun
     label.htmlFor = target.id;
   }
 
+  find('sheet-title').id = `${uid}-sheet-title`;
+  find('sheet').setAttribute('aria-labelledby', `${uid}-sheet-title`);
+
   let meta: Hello | null = null;
   let last: State | null = null;
   let worker: Worker | null = null;
   let selected: number | null = null;
   let started = false;
   let onScreen = true;
+  let sheet: 'report' | 'compare' | null = null;
+  let report: Summary | null = null;
+  let comparison: Comparison | null = null;
   const undo: (() => void)[] = [];
 
   const clock = (simSeconds: number): string => {
@@ -120,6 +137,84 @@ export function mountDispatchLab(root: HTMLElement, options: MountOptions): Moun
   };
   paintTheme();
 
+  // -------------------------------------------------------------- results
+
+  function drawSheet(): void {
+    const box = find('sheet');
+    box.hidden = sheet === null;
+    if (sheet === null || !meta) return;
+    const body = find('sheet-body');
+    const note = (text: string): HTMLElement => el('p', text);
+    const c = meta.config;
+    const day = `${c.startDay}, seed ${c.seed}, ${c.nDrivers} drivers, up to ${c.peakOrdersPerHour} orders an hour`;
+    if (sheet === 'report') {
+      find('sheet-title').textContent = last?.finished ? 'Full report: the whole day' : 'Full report: the day so far';
+      const current = meta.dispatchers.find((d) => d.name === (last?.dispatcher ?? c.dispatcher));
+      body.replaceChildren(
+        note(`${day}. Lateness counts every order that was due, delivered or not; times are measured on delivered orders.`),
+        resultsTable([current?.label ?? 'This run'], [report ?? undefined]),
+      );
+      return;
+    }
+    find('sheet-title').textContent = 'The same day under each dispatcher';
+    const k = comparison;
+    const total = meta.dispatchers.length;
+    const status = !k || k.done < total ? `Running the day: ${k?.done ?? 0} of ${total} done…` : null;
+    body.replaceChildren(
+      note(`${day}. Each column is the whole day, start to finish, with the same orders, kitchens, driver shifts and driver decisions. Only the dispatcher differs.`),
+      ...(status ? [note(status)] : []),
+      resultsTable(meta.dispatchers.map((d) => d.label), meta.dispatchers.map((_, i) => k?.summaries[i])),
+      note('Bold marks the better value where one direction is better. This is one day, and one day is one sample: on another day the gaps can be larger or smaller.'),
+    );
+  }
+
+  function openSheet(which: 'report' | 'compare'): void {
+    sheet = which;
+    if (which === 'compare' && !comparison) send({ type: 'cmd', cmd: 'compare' });
+    drawSheet();
+    find('sheet-close').focus();
+  }
+
+  function closeSheet(): void {
+    const opener = sheet === 'compare' ? 'open-compare' : 'open-report';
+    sheet = null;
+    drawSheet();
+    find(opener).focus();
+  }
+
+  // ----------------------------------------------------------------- links
+
+  /** The scenario that is running, including a dispatcher switched mid-day. */
+  const running = (): SimConfig | null =>
+    meta ? { ...meta.config, dispatcher: last?.dispatcher ?? meta.config.dispatcher } : null;
+
+  function syncAddress(): void {
+    const cfg = running();
+    if (!options.urlState || !cfg) return;
+    const query = `?${queryFromConfig(cfg)}`;
+    if (location.search !== query) history.replaceState(history.state, '', `${location.pathname}${query}${location.hash}`);
+  }
+
+  async function copyLink(): Promise<void> {
+    const cfg = running();
+    if (!cfg) return;
+    const base = new URL(options.shareUrl ?? location.href, location.href);
+    base.hash = '';
+    const link = scenarioUrl(base.toString(), cfg);
+    const field = find<HTMLInputElement>('share-url');
+    field.value = link;
+    try {
+      await navigator.clipboard.writeText(link);
+      field.hidden = true;
+      find('share-status').textContent = 'Link copied. It reopens these settings; the day itself can differ slightly in another browser.';
+    } catch {
+      // No clipboard access (an insecure page, or permission refused): show the link to copy by hand.
+      field.hidden = false;
+      field.select();
+      find('share-status').textContent = 'Copy the link above.';
+    }
+  }
+
   // ------------------------------------------------------------- messages
 
   function onHello(msg: Hello): void {
@@ -129,6 +224,14 @@ export function mountDispatchLab(root: HTMLElement, options: MountOptions): Moun
     find('detail').hidden = true;
     find('feed').replaceChildren();
     banner(null);
+    report = null;
+    comparison = null;
+    sheet = null;
+    drawSheet();
+    find('share-status').textContent = '';
+    find<HTMLInputElement>('share-url').hidden = true;
+    for (const name of ['open-report', 'open-compare', 'share']) find<HTMLButtonElement>(name).disabled = false;
+    syncAddress();
 
     const dispatcher = find<HTMLSelectElement>('dispatcher');
     dispatcher.replaceChildren();
@@ -181,7 +284,15 @@ export function mountDispatchLab(root: HTMLElement, options: MountOptions): Moun
 
   function onState(s: State): void {
     if (!meta || s.generation !== meta.generation) return;
+    if (last?.dispatcher !== s.dispatcher) {
+      last = s;
+      syncAddress();
+    }
     last = s;
+    if (s.report) {
+      report = s.report;
+      if (sheet === 'report') drawSheet();
+    }
     find('clock').textContent = s.clock;
     (find('progress').firstElementChild as HTMLElement).style.width = `${((100 * s.t) / s.end).toFixed(1)}%`;
     find('run-state').textContent = s.finished ? 'Day finished' : s.playing ? `Running at ${s.speed}×` : 'Paused';
@@ -295,11 +406,23 @@ export function mountDispatchLab(root: HTMLElement, options: MountOptions): Moun
         const msg = event.data;
         if (msg.type === 'hello') onHello(msg);
         else if (msg.type === 'state') onState(msg);
+        else if (msg.type === 'comparison') {
+          if (meta && msg.generation === meta.generation) {
+            comparison = msg;
+            if (sheet === 'compare') drawSheet();
+          }
+        }
         else if (msg.type === 'busy') banner('Building a new day…');
         else if (msg.type === 'error') banner(`Something went wrong: ${msg.message}`);
       };
       worker.onerror = (event) => banner(`Something went wrong: ${event.message}`);
-      send({ type: 'init', network, profile, config: options.config });
+      send({
+        type: 'init',
+        network,
+        profile,
+        config: options.config,
+        changes: options.urlState ? changesFromQuery(location.search) : undefined,
+      });
       syncVisible();
     } catch (error) {
       started = false;
@@ -342,6 +465,15 @@ export function mountDispatchLab(root: HTMLElement, options: MountOptions): Moun
   find('play').onclick = () => last && send({ type: 'cmd', cmd: 'play', on: !last.playing });
   find<HTMLSelectElement>('dispatcher').onchange = (e) =>
     send({ type: 'cmd', cmd: 'dispatcher', name: (e.target as HTMLSelectElement).value });
+  find('open-report').onclick = () => openSheet('report');
+  find('open-compare').onclick = () => openSheet('compare');
+  find('sheet-close').onclick = closeSheet;
+  find('share').onclick = () => void copyLink();
+  const onKey = (e: KeyboardEvent): void => {
+    if (e.key === 'Escape' && sheet !== null) closeSheet();
+  };
+  root.addEventListener('keydown', onKey);
+  undo.push(() => root.removeEventListener('keydown', onKey));
   find('zoom-in').onclick = () => map.zoomBy(1.6);
   find('zoom-out').onclick = () => map.zoomBy(1 / 1.6);
   find('zoom-fit').onclick = () => map.fit();

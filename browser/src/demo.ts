@@ -10,6 +10,10 @@ const mounted = mountDispatchLab(root, {
   dataUrl: `${import.meta.env.BASE_URL}data/`,
   autostart: !embedded,
   wheelZoom: embedded ? 'modifier' : 'always',
+  // The full page keeps its address in step with the scenario; the article
+  // version leaves the article's address alone and links to the full page.
+  urlState: !embedded,
+  shareUrl: embedded ? './index.html' : undefined,
 });
 
 document.getElementById('theme')?.addEventListener('click', () => {

@@ -82,3 +82,46 @@ describe('live controller', () => {
     expect(cfg).toMatchObject({ deliveryRadiusM: 300, startDay: 'Fri', dispatcher: 'matching_jit' });
   });
 });
+
+describe('re-running a day', () => {
+  it('gives the same result under the same dispatcher, whenever it is asked', () => {
+    const l = new LiveSim(gridNetwork(), profile(), config);
+    l.handle({ cmd: 'speed', value: 900 });
+    for (let i = 0; i < 20; i++) l.step(0.25); // part-way through the day
+    const early = l.compareUnder('matching_jit');
+    while (!l.sim.finished) l.step(0.25);
+    const whole = l.sim.summary();
+    expect(early).toEqual(whole);
+    expect(l.compareUnder('matching_jit')).toEqual(whole);
+  });
+
+  it('keeps the world and changes only the dispatcher', () => {
+    const l = new LiveSim(gridNetwork(), profile(), config);
+    const base = l.sim;
+    const other = base.fresh('nearest');
+    other.runUntil(1e9);
+    base.runUntil(1e9);
+    const world = (sim: typeof base) =>
+      [...sim.done, ...sim.active.values()]
+        .sort((a, b) => a.id - b.id)
+        .map((o) => [o.placed, o.restaurant, o.customerNode, o.ready, o.promised]);
+    expect(world(other)).toEqual(world(base));
+    expect(other.summary().dispatcher).toBe('nearest');
+    expect(other.summary().avg_delivery_min).not.toBe(base.summary().avg_delivery_min);
+    // Switching dispatcher mid-day on screen does not change what a comparison runs.
+    l.handle({ cmd: 'dispatcher', name: 'nearest' });
+    expect(l.compareUnder('matching').dispatcher).toBe('matching');
+  });
+
+  it('sends the full report about once a second', () => {
+    const l = new LiveSim(gridNetwork(), profile(), config);
+    expect(l.state(0).report).toBeDefined();
+    expect(l.state(400).report).toBeUndefined();
+    expect(l.state(1100).report?.placed).toBe(l.sim.nPlaced);
+  });
+
+  it('checks settings that arrive from a link', () => {
+    const l = new LiveSim(gridNetwork(), profile(), config, { nDrivers: '9999', startDay: 'Tue', seed: 'abc' });
+    expect(l.hello().config).toMatchObject({ nDrivers: 2000, startDay: 'Tue', seed: 3, nRestaurants: 20 });
+  });
+});

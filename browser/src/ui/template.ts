@@ -26,6 +26,13 @@ export const TEMPLATE = /* html */ `
         <div class="sdl-item"><span class="sdl-ramp" data-el="ramp"></span><span data-el="ramp-label">Freeway slowdown</span></div>
       </div>
     </details>
+    <div class="sdl-sheet" data-el="sheet" role="dialog" hidden>
+      <div class="sdl-sheet-head">
+        <h3 data-el="sheet-title"></h3>
+        <button type="button" data-el="sheet-close">Close</button>
+      </div>
+      <div data-el="sheet-body"></div>
+    </div>
     <div class="sdl-start" data-el="start">
       <button type="button" class="sdl-primary" data-el="start-button">Start the simulation</button>
       <p>Runs in your browser. Loads about 1 MB of Seattle street data.</p>
@@ -76,6 +83,15 @@ export const TEMPLATE = /* html */ `
       <div class="sdl-table" data-el="table" hidden></div>
     </section>
 
+    <section>
+      <h3>Results</h3>
+      <div class="sdl-actions">
+        <button type="button" data-el="open-report" disabled>Full report</button>
+        <button type="button" data-el="open-compare" disabled>Compare dispatchers</button>
+      </div>
+      <p class="sdl-note">The report covers the day so far. The comparison runs this same day, start to finish, under each dispatcher.</p>
+    </section>
+
     <section class="sdl-detail" data-el="detail" hidden></section>
 
     <section>
@@ -94,6 +110,9 @@ export const TEMPLATE = /* html */ `
         <div><label data-for="f-radius">Delivery radius (km)</label><input data-el="f-radius" type="number" min="0.3" max="8" step="0.5"></div>
         <div class="sdl-wide"><label data-for="f-seed">Random seed (same seed, same day)</label><input data-el="f-seed" type="number" min="0"></div>
         <button type="button" class="sdl-wide" data-el="restart">Restart the day</button>
+        <button type="button" class="sdl-wide" data-el="share" disabled>Copy a link to the running scenario</button>
+        <input class="sdl-wide" data-el="share-url" type="text" readonly hidden aria-label="Link to the running scenario">
+        <p class="sdl-note sdl-wide" data-el="share-status" role="status"></p>
       </div>
     </details>
 

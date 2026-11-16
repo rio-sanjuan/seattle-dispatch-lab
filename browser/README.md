@@ -7,7 +7,20 @@ from that same street data, so the page asks no other site for anything.
 
 It does what the Python live view (`dispatch-lab serve`) does: play, pause,
 change speed, switch dispatcher mid-day, click a driver to follow them, and
-restart the day with other settings.
+restart the day with other settings. It also has three things the Python view
+does not:
+
+- **Full report.** All 21 end-of-run metrics for the day so far, updated each
+  second.
+- **Compare dispatchers.** Runs the day on screen from start to finish under
+  each of the three dispatchers, with the same orders, kitchens, driver shifts
+  and driver decisions, and shows the results side by side. It takes a couple
+  of seconds. It is one day, so it shows the method (same day, only the
+  dispatcher differs), not how sure to be: that needs many days, which the
+  Python `compare` command does.
+- **A link to the scenario.** The settings travel in the address
+  (`?seed=7&day=Fri&start=10&drivers=220&orders=400&traffic=1&radius=4.5&dispatcher=matching_jit`).
+  Unknown or out-of-range values fall back to the defaults.
 
 ## Run it
 
@@ -21,7 +34,8 @@ npm install
 npm run dev                          # http://localhost:8766
 ```
 
-- `http://localhost:8766/` is the map filling the page.
+- `http://localhost:8766/` is the map filling the page. Its address follows
+  the scenario, so the address bar is always a link to what is running.
 - `http://localhost:8766/embed.html` is the widget inside an article column,
   with a theme switch, to see how it behaves on a blog page.
 
@@ -52,6 +66,9 @@ uv run python scripts/export_browser_fixtures.py   # after changing the Python s
 If a parity test fails after a Python change, the port has fallen behind:
 update the matching file in `src/sim/` until it passes again.
 
+`test/controller.test.ts` also checks the comparison: re-running the day on
+screen under its own dispatcher gives exactly the result the live run reaches.
+
 Two things are not identical by design:
 
 - **Days built in the browser are different days.** The browser has its own
@@ -67,9 +84,9 @@ Two things are not identical by design:
 - Couriers on public transit. The planner would need the bus and rail timetable
   shipped to every visitor, which means redistributing Sound Transit's data;
   see [docs/transit.md](../docs/transit.md) for the terms.
-- The multi-day experiments (`compare`, `sweep`, `information`, `fleet`) and
-  the "true drive times" switch they use. A 12-hour day runs in under a second
-  here, so they could be added.
+- The multi-day experiments (`compare`, `sweep`, `information`, `fleet`) with
+  their paired differences and intervals, and the "true drive times" switch
+  they use. A 12-hour day runs in under a second here, so they could be added.
 
 ## Layout
 
@@ -83,9 +100,10 @@ src/sim/      the simulator: no DOM, runs in Node and in a worker
   metrics.ts    every end-of-run metric
 src/live/     runs one simulation at a chosen speed
   controller.ts what server.py does, without the server
+  share.ts      a scenario's settings as a web address
   worker.ts     the Web Worker around it
   protocol.ts   the messages between page and worker
-src/ui/       the page: canvas map, charts, controls, styles
+src/ui/       the page: canvas map, charts, results sheet, controls, styles
 test/         parity with Python, plus unit tests
 ```
 
@@ -119,6 +137,19 @@ What a host site needs to do:
    variables when `data-theme`, `class` or `style` changes on `<html>`.
 4. **Credit the street data** on the page: "© OpenStreetMap contributors". The
    widget's own footer already does; keep it visible.
+
+Two options decide how links behave:
+
+- `urlState: true` is for a page that *is* the simulator. It reads the
+  scenario from the page's address on load and rewrites the address (without
+  adding history entries) whenever the scenario or dispatcher changes.
+- `shareUrl` is the page a copied link should open. An article that embeds the
+  widget leaves `urlState` off, so its own address is never touched, and sets
+  `shareUrl` to the full simulator page.
+
+A link reopens the same settings. In the same browser that is the same day;
+another browser's maths can round differently in rare cases, and then the day
+can differ. This has not been tested across browsers.
 
 Behaviour worth knowing when it sits in an article:
 
